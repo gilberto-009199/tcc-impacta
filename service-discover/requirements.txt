@@ -1,0 +1,8 @@
+certifi==2026.2.25
+charset-normalizer==3.4.4
+idna==3.11
+netifaces-plus==0.12.5
+requests==2.32.5
+sddp-discovery-protocol==1.5.0
+typing_extensions==4.15.0
+urllib3==2.6.3
