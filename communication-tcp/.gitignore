@@ -1,0 +1,61 @@
+# --- Python ---
+# Arquivos compilados (Bytecode)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribuição / Pacotes
+bin/
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Ambientes Virtuais (CRUCIAL) ---
+.venv/
+venv/
+ENV/
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Configurações de IDE ---
+# VS Code
+.vscode/
+# PyCharm / IntelliJ
+.idea/
+
+# --- Variáveis de Ambiente (Segurança) ---
+.env
+.venv
+*.env
+*.secret
+
+# --- Testes e Cobertura ---
+.tox/
+.nox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# --- Logs e Banco de Dados ---
+*.log
+*.sqlite
+*.db
+
+# --- Sistema Operacional ---
+.DS_Store
+Thumbs.db
