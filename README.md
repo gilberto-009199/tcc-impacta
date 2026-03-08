@@ -1,7 +1,13 @@
 # tcc-impacta
 
 Provas de conceito:
- + [Service Discover com Multicash](service-discover)
- + [Upnp para NAT](upnp-nat)
- + Protocolo de Comunicação via TCP
- + [Interface grafica](interface-grafica)
+ + [Service Discover com Multicash](service-discover) - lib ok!
+ 
+ + [Upnp para NAT](upnp-nat) - usando lib <--- Gil AQUI
+ + Protocolo de Comunicação via TCP - fazer na mão
+
+ + [Interface grafica](interface-grafica) - usando lib
+
+
+Produto final:
+ + 
