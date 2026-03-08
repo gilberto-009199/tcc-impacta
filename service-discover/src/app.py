@@ -23,7 +23,6 @@ class App:
         services = await self.discoverService.find();
         
         for svc in services:
-
             src_addr = getattr(svc, 'src_addr', 'none')
             headers = getattr(svc, 'src_addr', 'none')
 
