@@ -1,41 +1,48 @@
 import asyncio
 from src.multicast.network import Network
 
+wait_time_default = 5 # 5s
+headers_default = {
+    "Type": "Acme:TestDevice",
+    "Primary-Proxy": "test-device",
+    "Proxies": "test-device",
+    "Manufacturer": "Acme",
+    "Model": "TestDevPlus",
+    "Satus"
+    "Driver": "test-device_Acme_TestDevPlus.c4i",
+};
+
 class DiscoverService:
 
     def __init__(self, app):
-        print("DiscoverService intanciado")
         self.app = app
-        self.queuePeers = []
+
+        self.server = asyncio.ALL_COMPLETED
         self.network = Network(self)
 
-    async def run(self):
-        """Executa servidor e cliente (versão assíncrona)"""
-        # Inicia o servidor em uma tarefa separada
-        server_task = asyncio.create_task(
-            self.network.start_server_async(headers={
-                "Type": "Acme:TestDevice",
-                "Primary-Proxy": "test-device",
-                "Proxies": "test-device",
-                "Manufacturer": "Acme",
-                "Model": "TestDevPlus",
-                "Satus"
-                "Driver": "test-device_Acme_TestDevPlus.c4i",
-            })
+        self.queuePeers = []
+
+    def config(
+        self,
+        headers = headers_default
+    ):
+        
+        self.server = asyncio.create_task(
+            self.network.start_server_async(headers = headers)
         )
-        
-        # Dá um tempo para o servidor iniciar
-        await asyncio.sleep(2)
-        
-        # Faz a busca
+
+    async def serve(self):
+        await self.server
+
+    async def find(
+        self,
+        headers = headers_default,
+        wait_time = wait_time_default
+    ):
         services = await self.network.search_services_async(
-            pattern="Acme:TestDevice", 
-            wait_time=5
-        )
+            pattern=headers["Type"], 
+            wait_time = wait_time
+        );
+
+        return services;
         
-        for svc in services:
-            print(f"Serviço encontrado em {svc['src_addr']}")
-            print(f"Cabeçalhos: {svc['headers']}")
-        
-        # Aguarda o servidor (opcional - fica rodando)
-        await server_task

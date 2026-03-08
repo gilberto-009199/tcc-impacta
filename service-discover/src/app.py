@@ -1,4 +1,4 @@
-
+import asyncio
 from src.multicast.discoverService import DiscoverService
 
 class App:
@@ -9,12 +9,27 @@ class App:
 
 
     async def run(self):
-        print("App iniciando")
-        print("App inicializado!!!!")
-        print("App finalizado")
-
-        await self.discoverService.run();
         
+        print("App iniciando")
+        
+        self.discoverService.config();
+        
+        print("App inicializado!!!!")
+        
+        self.discoverService.serve();
+        
+        await asyncio.sleep(2)
+        
+        services = await self.discoverService.find();
+        
+        for svc in services:
 
+            src_addr = getattr(svc, 'src_addr', 'none')
+            headers = getattr(svc, 'src_addr', 'none')
+
+            print(f"Serviço encontrado em {src_addr}")
+            print(f"Cabeçalhos: {headers}")
+
+        print("App finalizado")
 
 app = App()

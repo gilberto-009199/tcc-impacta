@@ -3,7 +3,7 @@ import asyncio
 import sddp_discovery_protocol as sddp
 
 class Network:
-    def __init__(self, discover_service=None):
+    def __init__(self, discover_service):
         """
         Inicializa a rede para service discovery com SDDP.
         
@@ -16,7 +16,7 @@ class Network:
         logging.basicConfig(level=logging.INFO)
         print("Network instanciado")
 
-    async def start_server_async(self, headers: dict = None, advertise_interval: int = 60):
+    async def start_server_async(self, headers, advertise_interval = 1):
         """
         Inicia o servidor SDDP para anunciar o serviço (versão assíncrona).
         
@@ -31,9 +31,9 @@ class Network:
         self.logger.info("Iniciando servidor SDDP com cabeçalhos: %s", device_headers)
         async with sddp.SddpServer(device_headers=device_headers, advertise_interval=advertise_interval) as server:
             self.logger.info("Servidor SDDP rodando. Pressione Ctrl+C para parar.")
-            await server.wait_for_done()  # Aguarda até ser interrompido
-
-    def start_server(self, headers: dict = None, advertise_interval: int = 60):
+            await server.wait_for_done()  
+            
+    def start_server(self, headers, advertise_interval = 60):
         """
         Inicia o servidor SDDP (versão síncrona, bloqueante).
         """
@@ -46,7 +46,7 @@ class Network:
         finally:
             loop.close()
 
-    async def search_services_async(self, pattern: str = "*", wait_time: float = 3.0, max_responses: int = 10):
+    async def search_services_async(self, pattern, wait_time, max_responses = 10):
         """
         Busca serviços na rede (versão assíncrona).
         
@@ -68,7 +68,7 @@ class Network:
         self.logger.info("Busca concluída. %d serviço(s) encontrado(s).", len(results))
         return results
 
-    def search_services(self, pattern: str = "*", wait_time: float = 3.0, max_responses: int = 10):
+    def search_services(self, pattern, wait_time, max_responses):
         """
         Busca serviços na rede (versão síncrona).
         
