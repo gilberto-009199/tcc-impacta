@@ -14,6 +14,9 @@ class MsgInfo(Msg):
         #  0  - open internet wan
         #  0  - open router piece
         # identifier  160 bytes
+        # arvore macketit
+        # pares diretos
+        # pares indiretos 
 
     def toPacket(self):
         return self.packet;

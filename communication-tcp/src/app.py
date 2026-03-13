@@ -1,20 +1,29 @@
 
-from src.multicast.discoverService import DiscoverService
+import time
+from src.protocol.client import Client
+from src.protocol.server import Server
 
 class App:
     
     def __init__(self):
         print("App intanciado")
-        self.discoverService = DiscoverService(self);
+        self.server = Server(self);
+        self.client = Client(self);
 
 
-    async def run(self):
+    def run(self):
         print("App iniciando")
         print("App inicializado!!!!")
         print("App finalizado")
 
-        await self.discoverService.run();
+        self.server.run();
+
+        time.sleep(10);
+
+        self.client.run();
         
+
+        time.sleep(10);
 
 
 app = App()

@@ -8,8 +8,6 @@ class MsgInfoRequest(Msg):
         if len(packet) == 0:
             pass
 
-        # attribute
-
     def toPacket(self):
         return self.packet;
 

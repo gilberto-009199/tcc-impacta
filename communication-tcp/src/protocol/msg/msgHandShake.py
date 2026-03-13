@@ -11,7 +11,7 @@ class MsgHandShake(Msg):
         if len(packet) == 0:
             pass
         
-        # banner equals
+        # banner 
         # feature 
         #  0  - open bluetooh 
         #  0  - open internet wan

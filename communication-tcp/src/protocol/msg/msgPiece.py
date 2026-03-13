@@ -11,7 +11,7 @@ class MsgPiece(Msg):
         # attribute
         # IDENTIFIER DATA 
         # PIECE[Z:Y] FOR DATA IN IDENTIFIER
-        # DATA FOR IDENTIFIER
+        # DATA FOR PIECE IDENTIFIER 
         
     def toPacket(self):
         return self.packet;

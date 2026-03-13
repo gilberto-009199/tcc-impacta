@@ -9,10 +9,7 @@ class MsgKeepAlive(Msg):
             pass
 
         # attribute
-    
 
-
-    
 
     def toPacket(self):
         return self.packet;
