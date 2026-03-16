@@ -1,5 +1,7 @@
 
 import time
+from src.protocol.peer import Peer
+from src.peersManager import PeerManager
 from src.protocol.client import Client
 from src.protocol.server import Server
 
@@ -7,23 +9,25 @@ class App:
     
     def __init__(self):
         print("App intanciado")
-        self.server = Server(self);
-        self.client = Client(self);
+        self.peer = Peer(None, None, None, None)
+        
+        #self.peer.identifier = None
+        #self.peer.feature = None
+        #self.peer.port = None
+        #self.peer.info = None
+
+        self.peerManager = PeerManager(self, self.peer)
+        
 
 
     def run(self):
         print("App iniciando")
-        print("App inicializado!!!!")
-        print("App finalizado")
-
-        self.server.run();
-
-        time.sleep(10);
-
-        self.client.run();
         
+        self.peerManager.run();        
 
         time.sleep(10);
+
+        print("App finalizado")
 
 
 app = App()

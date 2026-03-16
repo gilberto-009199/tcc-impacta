@@ -1,5 +1,3 @@
-from src.protocol.msg.msg import Msg
-
 class Msg:
 
     # IDENTIFICADOR
