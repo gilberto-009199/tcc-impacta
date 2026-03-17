@@ -25,7 +25,7 @@ class App:
         
         self.peerManager.run();        
 
-        time.sleep(10);
+        time.sleep(48);
 
         print("App finalizado")
 

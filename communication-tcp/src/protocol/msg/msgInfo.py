@@ -19,7 +19,7 @@ class MsgInfo(Msg):
         # pares indiretos 
 
     def toPacket(self):
-        return self.packet;
+        return Msg.MSG_TYPE_INFO + self.packet;
 
     @staticmethod
     def ofPacket(packet = []):

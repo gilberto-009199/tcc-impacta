@@ -14,7 +14,7 @@ class MsgPiece(Msg):
         # DATA FOR PIECE IDENTIFIER 
         
     def toPacket(self):
-        return self.packet;
+        return Msg.MSG_TYPE_PIECE + bytes(self.packet);
 
     @staticmethod
     def ofPacket(packet = []):

@@ -14,7 +14,7 @@ class MsgPieceRequest(Msg):
         
 
     def toPacket(self):
-        return self.packet;
+        return Msg.MSG_TYPE_PIECE_REQUEST + bytes(self.packet);
 
     @staticmethod
     def ofPacket(packet = []):

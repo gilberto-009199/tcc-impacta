@@ -9,7 +9,7 @@ class MsgInfoRequest(Msg):
             pass
 
     def toPacket(self):
-        return self.packet;
+        return Msg.MSG_TYPE_INFO_REQUEST + self.packet;
 
     @staticmethod
     def ofPacket(packet = []):

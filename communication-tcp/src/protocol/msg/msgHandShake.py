@@ -5,6 +5,7 @@ from src.protocol.msg.msg import Msg
 class MsgHandShake(Msg):
     
     MSG_HAND_SHAKE_BANNER = b"MENSSAGEIRO_IMPACTA"
+    MSG_HAND_SHAKE_LENGTH = 1 + len(MSG_HAND_SHAKE_BANNER) + 3 + 160
 
     def __init__(self, packet = []):
         # banner 
@@ -25,7 +26,7 @@ class MsgHandShake(Msg):
         
 
     def parsePacket(self, packet):
-        index = 0
+        index = 0 + bytes(Msg.MSG_TYPE_HAND_SHAKE).__len__()
         self.banner = packet[index:self.MSG_HAND_SHAKE_BANNER.__len__()]
         index += self.MSG_HAND_SHAKE_BANNER.__len__()
         self.feature = list(packet[index:index + 3])
@@ -33,7 +34,7 @@ class MsgHandShake(Msg):
         self.identifier = packet[index:index + 160]
 
     def toPacket(self):
-        return self.banner + bytes(self.feature) + self.identifier
+        return bytes(Msg.MSG_TYPE_HAND_SHAKE) + self.banner + bytes(self.feature) + self.identifier
 
     @staticmethod
     def ofPeer(peer):

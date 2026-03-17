@@ -2,17 +2,11 @@ from src.protocol.msg.msg import Msg
 
 class MsgKeepAlive(Msg):
 
-    def __init__(self, packet = []):
-        self.packet = []
-
-        if len(packet) == 0:
-            pass
-
-        # attribute
-
+    def __init__(self, packet = [1]):
+        self.packet = packet
 
     def toPacket(self):
-        return self.packet;
+        return Msg.MSG_TYPE_KEEP_ALIVE + bytes(self.packet);
 
     @staticmethod
     def ofPacket(packet = []):

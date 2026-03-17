@@ -1,7 +1,7 @@
 class Msg:
 
     # IDENTIFICADOR
-    MSG_TYPE_HANDSHAKE = 0x01
+    MSG_TYPE_HAND_SHAKE = 0x01
     MSG_TYPE_KEEP_ALIVE = 0x02
     
     MSG_TYPE_INFO = 0x03

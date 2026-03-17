@@ -1,6 +1,6 @@
 import time
+from src.protocol.msg.msgKeepAlive import MsgKeepAlive
 from src.protocol.msg.msgHandShake import MsgHandShake
-import socket
 
 
 class Peer:
@@ -18,6 +18,8 @@ class Peer:
         self.hasSendHandshake = False
         self.hasRecvHandshake = False
 
+        self.timeKeepAlive = 0;
+
         self.queueMsgRecv = []
         self.queueMsgSend = []
 
@@ -30,58 +32,155 @@ class Peer:
     def recvMsg(self, msg):
         self.queueMsgRecv.append(msg);
 
-
-
+    # lifecycle of peer connection
     def run(self):
-        # lifecycle of peer connection
+
         if self.socket is None:
             return False
-        
-        # verify hasHandshake
-        # if not hasHandshake then send MsgHandshake 
+
+        # Handshake
         if not self.hasSendHandshake or not self.hasRecvHandshake:
             self.handShake();
+            return True;
 
-        # count  keep alive time 
-        # if max time then send keep alive
+        # KeepAlive
+        current_time = time.time()
+        if current_time - self.timeKeepAlive >= 8:
+            print(f"[PEER] Enviando keep alive para {self.host}:{self.port}")
+            self.timeKeepAlive = current_time
+            self.keepAlive()
+            return True
 
-        # send msg in queueMsgSend
-        # recv msg in queueMsgRecv
+        self.sendMsg();
+    
+        self.recvMsg();
+        
+        return True
 
+    def sendMsg(self):
         pass
+        """while len(self.queueMsgSend) > 0:
+            msg = self.queueMsgSend.pop(0)
+            try:
+                if self.verifyconnection():
+                    return
+
+                self.socket.send(msg.toPacket())
+
+            except Exception as e:
+                print(f" [PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
+                print(f"Handshake failed: {e}")
+                self.disconnect()"""
+
+    def recvMsg(self):
+        try:
+            if not self.validConnection():
+                return
+
+            data = self.socket.recv(1)
+            if len(data) > 0:
+                # Process received data
+                print(f"Received data from {self.host}:{self.port}: {data.hex()}")
+                pass
+
+        except Exception as e:
+            print(f" [PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
+            print(f"Handshake failed: {e}")
+            # Pegamos o rastro (traceback) que está guardado dentro do 'e'
+            tb = e.__traceback__
+            
+            # Navegamos até o último frame (onde o erro realmente aconteceu)
+            while tb.tb_next:
+                tb = tb.tb_next
+            
+            # Agora acessamos o frame e o código
+            linha = tb.tb_lineno
+            arquivo = tb.tb_frame.f_code.co_filename
+            print(f" [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
+            self.disconnect()
+
+    def processMsg(self, msg):
+        # Process the received message
+        pass
+    
+    def keepAlive(self):
+        try:
+
+            if not self.validConnection():
+                return
+
+            print(f" [PEER] Enviando keep alive para {self.host}:{self.port}")
+            self.socket.send(MsgKeepAlive().toPacket())
+
+        except Exception as e:
+            
+            print(f" [PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
+            print(f"Handshake failed: {e}")
+            # Pegamos o rastro (traceback) que está guardado dentro do 'e'
+            tb = e.__traceback__
+            
+            # Navegamos até o último frame (onde o erro realmente aconteceu)
+            while tb.tb_next:
+                tb = tb.tb_next
+            
+            # Agora acessamos o frame e o código
+            linha = tb.tb_lineno
+            arquivo = tb.tb_frame.f_code.co_filename
+            print(f" [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
+            self.disconnect()
 
     def handShake(self):
         try:
-            
-            if not self.hasRecvHandshake:
-                
-                print(f"Recebendo handshake de {self.host}:{self.port}...")
-                data = self.socket.recv(1)
-                print(f"handshake de {self.host}:{self.port}: " + data.decode())
 
-                if len(data) == 1:
-                    recv_handshake = MsgHandShake.ofPacket(data)
-                    # if recv MsgHandshake is valid then hasHandshake = True
-                    if recv_handshake.banner == MsgHandShake.MSG_HAND_SHAKE_BANNER:
-                        self.identifier = recv_handshake.identifier
-                        self.feature = recv_handshake.feature
-                        self.hasRecvHandshake = True
+            if not self.validConnection():
+                return
 
-            # send MsgHandshake
             if not self.hasSendHandshake:
-                print(f"Enviando handshake para {self.host}:{self.port}...")
+                print(f" [PEER] Enviando handshake para {self.host}:{self.port}")
                 handshake_msg = MsgHandShake.ofPeer(self.peerManager.peer)
                 self.socket.send(handshake_msg.toPacket())
                 self.hasSendHandshake = True
 
             
+            if not self.hasRecvHandshake:
+                data = self.socket.recv(MsgHandShake.MSG_HAND_SHAKE_LENGTH)
+                if len(data) == MsgHandShake.MSG_HAND_SHAKE_LENGTH:
+                    recv_handshake = MsgHandShake.ofPacket(data)
+                    if recv_handshake.banner == MsgHandShake.MSG_HAND_SHAKE_BANNER:
+                        print(f" [PEER] Recebido handshake de {self.host}:{self.port}")
+                        self.identifier = recv_handshake.identifier
+                        self.feature = recv_handshake.feature
+                        self.hasRecvHandshake = True
 
         except Exception as e:
-            print(f"\t [PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
+            # Pegamos o rastro (traceback) que está guardado dentro do 'e'
+            tb = e.__traceback__
+            
+            # Navegamos até o último frame (onde o erro realmente aconteceu)
+            while tb.tb_next:
+                tb = tb.tb_next
+            
+            # Agora acessamos o frame e o código
+            linha = tb.tb_lineno
+            arquivo = tb.tb_frame.f_code.co_filename
+            print(f" [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
+
+            print(f" [PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
+            
             print(f"Handshake failed: {e}")
             self.disconnect()
 
-    
+    def validConnection(self):
+        if self.socket is None:
+            print(f"Socket is None for {self.host}:{self.port}")
+            return False
+
+        if self.socket._closed:
+            print(f"Socket is closed for {self.host}:{self.port}")
+            return False
+
+        return True    
+
     def disconnect(self):
         if self.socket:
             self.socket.close()
