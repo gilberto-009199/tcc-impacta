@@ -9,7 +9,7 @@ class App:
     
     def __init__(self):
         print("App intanciado")
-        self.peer = Peer(None, None, None, None)
+        self.peer = Peer(None, "192.168.0.116", 8888, None)
         
         #self.peer.identifier = None
         #self.peer.feature = None

@@ -2,10 +2,10 @@ from src.protocol.msg.msg import Msg
 
 class MsgInfo(Msg):
 
-    def __init__(self, packet = []):
+    def __init__(self, packet = [0]):
         self.packet = []
 
-        if len(packet) == 0:
+        if len(packet) > 0:
             pass
 
         # attribute
@@ -19,7 +19,10 @@ class MsgInfo(Msg):
         # pares indiretos 
 
     def toPacket(self):
-        return Msg.MSG_TYPE_INFO + self.packet;
+        header  = bytes([Msg.MSG_TYPE_INFO]) + bytes([len(self.packet)])
+        payload =  bytes(self.packet)
+
+        return header + payload;
 
     @staticmethod
     def ofPacket(packet = []):

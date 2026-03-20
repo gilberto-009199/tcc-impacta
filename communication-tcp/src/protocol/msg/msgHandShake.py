@@ -27,14 +27,16 @@ class MsgHandShake(Msg):
 
     def parsePacket(self, packet):
         index = 0 + bytes(Msg.MSG_TYPE_HAND_SHAKE).__len__()
-        self.banner = packet[index:self.MSG_HAND_SHAKE_BANNER.__len__()]
+        self.banner = packet[index: index + self.MSG_HAND_SHAKE_BANNER.__len__()]
         index += self.MSG_HAND_SHAKE_BANNER.__len__()
         self.feature = list(packet[index:index + 3])
         index += 3
         self.identifier = packet[index:index + 160]
 
     def toPacket(self):
-        return bytes(Msg.MSG_TYPE_HAND_SHAKE) + self.banner + bytes(self.feature) + self.identifier
+        header  = bytes(Msg.MSG_TYPE_HAND_SHAKE) + self.banner
+        payload =  bytes(self.feature) + self.identifier
+        return header + payload
 
     @staticmethod
     def ofPeer(peer):

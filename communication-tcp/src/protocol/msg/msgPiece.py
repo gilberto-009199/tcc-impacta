@@ -14,7 +14,11 @@ class MsgPiece(Msg):
         # DATA FOR PIECE IDENTIFIER 
         
     def toPacket(self):
-        return Msg.MSG_TYPE_PIECE + bytes(self.packet);
+
+        header  = bytes([Msg.MSG_TYPE_PIECE])
+        payload =  bytes(self.packet)
+        
+        return header + payload;
 
     @staticmethod
     def ofPacket(packet = []):

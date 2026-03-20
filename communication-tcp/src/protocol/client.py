@@ -8,9 +8,9 @@ class Client:
     def __init__(self, peerManager):
         self.peerManager = peerManager
         self.thread = None
-        self.host = "192.168.0.124"
-        self.port = 8090
-        self.peer = Peer(None, self.host, self.port, self.peerManager)
+        self.host = "192.168.0.116"
+        self.port = 8888
+        self.peer = Peer(None, self.host, self.port, self.peerManager, "client")
 
     def run(self):
         self.thread = threading.Thread(target=self.connect, daemon=True)
@@ -25,15 +25,15 @@ class Client:
             self.port
         ))
         
-        print(f"[CLIENTE] Conectado a {self.host}:{self.port}...")
+        print(f"28 [CLIENTE] Conectado a {self.host}:{self.port}...")
         
         soc.settimeout(30)
-
+        soc.setblocking(False)
         self.peer.setSocket(soc);
 
         self.peerManager.createPeer(self.peer);
         
-        print(f"[CLIENTE] Conectado a {self.host}:{self.port}, logs:")
+        print(f"36 [CLIENTE] Conectado a {self.host}:{self.port}, logs:")
 
         while True:
             try:
@@ -44,8 +44,8 @@ class Client:
                     break
 
             except Exception as e:
-                print(f"[CLIENTE] Erro ao executar peer {self.peer.host}:{self.peer.port}: {e}")
+                print(f"47 [CLIENTE] Erro ao executar peer {self.peer.host}:{self.peer.port}: {e}")
                 self.peerManager.removePeer(self.peer);
 
-        print(f"[CLIENTE] Desconectado de {self.host}:{self.port}")
+        print(f"50 [CLIENTE] Desconectado de {self.host}:{self.port}")
                 

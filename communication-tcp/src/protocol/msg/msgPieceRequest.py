@@ -14,7 +14,10 @@ class MsgPieceRequest(Msg):
         
 
     def toPacket(self):
-        return Msg.MSG_TYPE_PIECE_REQUEST + bytes(self.packet);
+        header  = bytes([Msg.MSG_TYPE_PIECE_REQUEST])
+        payload =  bytes(self.packet)
+        
+        return header + payload;
 
     @staticmethod
     def ofPacket(packet = []):
