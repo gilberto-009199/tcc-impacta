@@ -9,8 +9,10 @@ class MsgInfoRequest(Msg):
             pass
 
     def toPacket(self):
-        header  = bytes([Msg.MSG_TYPE_INFO_REQUEST])
+        
         payload =  bytes(self.packet)
+        header  = bytes(Msg.MSG_TYPE_INFO_REQUEST) + bytes([len(payload)])
+
         return header + payload;
 
     @staticmethod

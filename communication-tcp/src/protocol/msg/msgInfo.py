@@ -19,9 +19,11 @@ class MsgInfo(Msg):
         # pares indiretos 
 
     def toPacket(self):
-        header  = bytes([Msg.MSG_TYPE_INFO]) + bytes([len(self.packet)])
-        payload =  bytes(self.packet)
 
+        payload =  bytes(self.packet)
+        header  = bytes(Msg.MSG_TYPE_INFO) + bytes([len(payload)])
+        
+        
         return header + payload;
 
     @staticmethod

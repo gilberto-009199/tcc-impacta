@@ -15,8 +15,9 @@ class MsgPiece(Msg):
         
     def toPacket(self):
 
-        header  = bytes([Msg.MSG_TYPE_PIECE])
         payload =  bytes(self.packet)
+        header  = bytes(Msg.MSG_TYPE_PIECE) + bytes([len(payload)])
+
         
         return header + payload;
 

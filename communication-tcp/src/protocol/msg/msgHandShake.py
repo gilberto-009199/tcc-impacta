@@ -34,8 +34,10 @@ class MsgHandShake(Msg):
         self.identifier = packet[index:index + 160]
 
     def toPacket(self):
-        header  = bytes(Msg.MSG_TYPE_HAND_SHAKE) + self.banner
-        payload =  bytes(self.feature) + self.identifier
+        
+        payload =  self.banner + bytes(self.feature) + self.identifier
+        header  = bytes(Msg.MSG_TYPE_HAND_SHAKE) + bytes([len(payload)])
+        
         return header + payload
 
     @staticmethod
