@@ -2,12 +2,9 @@
 
 Provas de conceito:
  + [Service Discover com Multicash](service-discover) - lib ok!
- 
- + [Upnp para NAT](upnp-nat) - usando lib <--- Gil AQUI
- + Protocolo de Comunicação via TCP - fazer na mão
-
- + [Interface grafica](interface-grafica) - usando lib
-
+ + [Upnp para NAT](upnp-nat) - usando lib ok!
+ + [Protocolo de Comunicação via TCP]() - tcp protocol  ok!
+ + [Interface grafica](application) - flet app  <--- Gil AQUI
 
 Produto final:
- + 
+ + App com cadeia de markov e DHT
