@@ -40,12 +40,13 @@ class Client:
 
                 time.sleep(0.3)        
                 if not self.peer.run():
-                    self.peerManager.removePeer(self.peer);
+                    self.peerManager.removePeer(peer=self.peer)
                     break
 
             except Exception as e:
                 print(f"47 [CLIENTE] Erro ao executar peer {self.peer.host}:{self.peer.port}: {e}")
-                self.peerManager.removePeer(self.peer);
+                self.peerManager.removePeer(peer=self.peer)
+                break
 
         print(f"50 [CLIENTE] Desconectado de {self.host}:{self.port}")
                 

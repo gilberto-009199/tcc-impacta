@@ -1,4 +1,7 @@
+import base64
+import json
 import secrets
+import struct
 from src.protocol.msg.msg import Msg
 
 
@@ -26,19 +29,34 @@ class MsgHandShake(Msg):
         
 
     def parsePacket(self, packet):
-        index = 0 + bytes(Msg.MSG_TYPE_HAND_SHAKE).__len__()
-        self.banner = packet[index: index + self.MSG_HAND_SHAKE_BANNER.__len__()]
-        index += self.MSG_HAND_SHAKE_BANNER.__len__()
-        self.feature = list(packet[index:index + 3])
-        index += 3
-        self.identifier = packet[index:index + 160]
+        
+        packet = packet[3:]
+
+        self.banner = packet[:self.MSG_HAND_SHAKE_BANNER.__len__()]
+        
+        jsonpacket = json.loads(packet[self.MSG_HAND_SHAKE_BANNER.__len__():].decode('utf-8'))
+
+        self.feature = list(jsonpacket["feature"])
+        self.identifier = base64.b64decode(jsonpacket["identifier"])
 
     def toPacket(self):
         
-        payload =  self.banner + bytes(self.feature) + self.identifier
-        header  = bytes(Msg.MSG_TYPE_HAND_SHAKE) + bytes([len(payload)])
+        payload = json.dumps({
+            "feature": self.feature,
+            "identifier": base64.b64encode(self.identifier).decode('utf-8'),
+        }).encode('utf-8')
+
+        payload = self.banner + bytes(payload)
         
-        return header + payload
+
+        if len(payload) > 65535:
+            raise ValueError(f"Payload muito grande: {len(payload)}")
+        
+        header = struct.pack('!BH', Msg.MSG_TYPE_HAND_SHAKE, len(payload))
+    
+        packet = header + payload
+
+        return packet
 
     @staticmethod
     def ofPeer(peer):
@@ -52,3 +70,13 @@ class MsgHandShake(Msg):
     def ofPacket(packet = []):
         return MsgHandShake(packet);
 
+    def __str__(self):
+        try:
+            
+            return (f"{self.__class__.__name__}("
+                    f"banner: {self.banner}, "
+                    f"feature: {self.feature}, "
+                    f"identifier: {base64.b64encode(self.identifier).decode('utf-8')}"
+                    f")")
+        except Exception as e:
+            return f"{self.__class__.__name__}(parse_error: {e})"

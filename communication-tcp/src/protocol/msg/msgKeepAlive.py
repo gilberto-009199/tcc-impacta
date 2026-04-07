@@ -1,17 +1,30 @@
+from email import header
+import struct
+
 from src.protocol.msg.msg import Msg
 
 class MsgKeepAlive(Msg):
 
-    def __init__(self, packet = [0]):
-        self.packet = packet
+    def __init__(self, packet = []):
+        pass
 
     def toPacket(self):
         
-        payload =  bytes(self.packet)
-        header  = bytes(Msg.MSG_TYPE_KEEP_ALIVE) + bytes([len(payload)])
+        
+        header = struct.pack('!BH', Msg.MSG_TYPE_KEEP_ALIVE, 0)
 
-        return header + payload
+        packet = header
+
+        return packet
 
     @staticmethod
     def ofPacket(packet = []):
         return MsgKeepAlive(packet);
+
+
+    def __str__(self):
+        try:
+            
+            return (f"{self.__class__.__name__}()")
+        except Exception as e:
+            return f"{self.__class__.__name__}(parse_error: {e})"

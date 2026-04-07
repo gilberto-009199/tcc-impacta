@@ -68,13 +68,13 @@ class Server:
             try:
                 print(f"63 [SERVIDOR] Conectado a {peer.host}:{peer.port}, logs:")
                 if not peer.run():
-                    self.peerManager.removePeer(peer)
+                    self.peerManager.removePeer(peer=peer)
                     self.peers.remove(peer)
             except BlockingIOError:
                 pass
             except Exception as e:
                 print(f"70 [SERVIDOR] Erro ao executar peer {peer.host}:{peer.port}: {e}")
-                self.peerManager.removePeer(peer)
+                self.peerManager.removePeer(peer=peer)
                 self.peers.remove(peer)
 
     def connect(self, s, host, port):
