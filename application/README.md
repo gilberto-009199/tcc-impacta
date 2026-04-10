@@ -2,18 +2,22 @@
 
 ## Run the app
 
-### uv
-
 Run as a desktop app:
 
 ```bash
-uv run flet run
+flet run
 ```
 
 Run as a web app:
 
 ```bash
-uv run flet run --web
+flet run --web
+```
+
+Run as a android:
+
+```bash
+flet run --android
 ```
 
 For more details on running the app, refer to the [Getting Started Guide](https://flet.dev/docs/).

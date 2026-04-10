@@ -3,12 +3,14 @@ name = "teste232"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
-    "flet>=0.84.0"
+    "flet>=0.84.0",
+    "sddp-discovery-protocol (==1.5.0)",
+    "miniupnpc (>=2.3.3,<3.0.0)"
 ]
 
 [dependency-groups]

@@ -8,3 +8,5 @@ Provas de conceito:
 
 Produto final:
  + App com cadeia de markov e DHT
+
+
