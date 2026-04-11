@@ -1,4 +1,4 @@
-import miniupnpc
+from upnpy import UPnP
 
 from src.upnp.network import Network
 
@@ -12,32 +12,42 @@ class UPNPService:
             network: Instância da classe Network
         """
         self.network = Network()
-        self.upnp = None
+        self.upnp = UPnP()
+        self.device = None
         self.dispositivo_conectado = False
         print("🔌 UPNPService initialized")
     
     def config(self):
         """Configura e descobre dispositivos UPnP na rede"""
         try:
-            self.upnp = miniupnpc.UPnP()
-            self.upnp.discoverdelay = 10000
-            # Descobrir dispositivos (timeout de 2 segundos)
+            # Descobrir dispositivos
             print("🔍 Procurando dispositivos UPnP...")
+            devices = self.upnp.discover()
             
-            num_devices = self.upnp.discover();
-
+            num_devices = len(devices)
             print(f"  Encontrados {num_devices} dispositivos")
             
             if num_devices == 0:
                 print("❌ Nenhum dispositivo UPnP encontrado!")
                 return False
             
-            # Selecionar o gateway (roteador)
-            self.upnp.selectigd()
+            # Procurar por um dispositivo de gateway (IGD)
+            for device in devices:
+                if 'InternetGatewayDevice' in device.device_type:
+                    self.device = device
+                    break
             
-            # Obter IP externo e atualizar o Network
-            ip_externo = self.upnp.externalipaddress()
-            self.network.set_external_ip(ip_externo)
+            # Se não encontrou IGD específico, usar o primeiro dispositivo
+            if self.device is None:
+                self.device = devices[0]
+            
+            # Obter IP externo
+            try:
+                ip_externo = self._get_external_ip()
+                if ip_externo:
+                    self.network.set_external_ip(ip_externo)
+            except:
+                print("⚠️  Não foi possível obter IP externo")
             
             print(f"✅ UPnP configurado com sucesso!")
             print(f"  IP Local: {self.network.get_local_ip()}")
@@ -50,26 +60,56 @@ class UPNPService:
             print(f"❌ Erro na configuração UPnP: {e}")
             return False
     
+    def _get_external_ip(self):
+        """Obtém o IP externo via WANIPConnection ou WANPPPConnection"""
+        try:
+            # Procurar pelos serviços de PppConnection/IpConnection
+            for device in self.upnp.discover():
+                services = device.get_services()
+                for service in services:
+                    if 'WANIPConnection' in service.service_type or 'WANPPPConnection' in service.service_type:
+                        # Tentar obter IP externo
+                        try:
+                            result = service.GetExternalIPAddress()
+                            if result and 'NewExternalIPAddress' in result:
+                                return result['NewExternalIPAddress']
+                        except:
+                            pass
+            return None
+        except:
+            return None
+    
     def _porta_ja_existe(self, port, protocolo):
         """Verifica se uma porta já está mapeada"""
         try:
-            # O argumento '0' significa listar todas as portas
-            index = 0
-            while True:
-                try:
-                    # Tenta obter o mapeamento no índice atual
-                    mapping = self.upnp.getgenericportmapping(index)
-                    if mapping is None:
-                        break
-                    
-                    # Verifica se a porta e protocolo correspondem
-                    if (mapping[0] == port and mapping[1] == protocolo):
-                        return True, mapping
-                    
-                    index += 1
-                except:
-                    break
-                    
+            if not self.device:
+                return False, None
+            
+            # Procurar pelo serviço de WANIPConnection ou WANPPPConnection
+            services = self.device.get_services()
+            for service in services:
+                if 'WANIPConnection' in service.service_type or 'WANPPPConnection' in service.service_type:
+                    try:
+                        # Listar todas as portas
+                        index = 0
+                        while True:
+                            try:
+                                result = service.GetGenericPortMappingEntry(NewPortMappingIndex=index)
+                                if not result:
+                                    break
+                                
+                                external_port = result.get('NewExternalPort')
+                                protocol = result.get('NewProtocol', 'TCP')
+                                
+                                if external_port == str(port) and protocol.upper() == protocolo.upper():
+                                    return True, result
+                                
+                                index += 1
+                            except:
+                                break
+                    except:
+                        pass
+            
             return False, None
             
         except Exception as e:
@@ -90,27 +130,41 @@ class UPNPService:
             
             if existe:
                 print(f"ℹ️  Porta {port}/{protocolo} já está aberta!")
-                print(f"  {mapping[2]}:{mapping[3]} → {mapping[0]}/{mapping[1]}")
+                print(f"  {mapping.get('NewInternalClient')}:{mapping.get('NewInternalPort')} → {mapping.get('NewExternalPort')}/{mapping.get('NewProtocol')}")
                 return True
             
             # Adicionar mapeamento
             ip_local = self.network.get_local_ip()
-            resultado = self.upnp.addportmapping(
-                port,                    # Porta externa
-                protocolo,                # Protocolo
-                ip_local,                 # IP interno (do Network)
-                port,                     # Porta interna
-                descricao,                # Descrição
-                ''                         # Remote host
-            )
             
-            if resultado:
-                print(f"✅ Porta {port}/{protocolo} aberta com sucesso!")
-                print(f"  {self.network.get_external_ip()}:{port} → {ip_local}:{port}")
-                return True
-            else:
-                print(f"❌ Falha ao abrir porta {port}")
+            if not self.device:
+                print("❌ Dispositivo não configurado")
                 return False
+            
+            # Procurar pelo serviço de WANIPConnection ou WANPPPConnection
+            services = self.device.get_services()
+            for service in services:
+                if 'WANIPConnection' in service.service_type or 'WANPPPConnection' in service.service_type:
+                    try:
+                        resultado = service.AddPortMapping(
+                            NewRemoteHost='',
+                            NewExternalPort=str(port),
+                            NewProtocol=protocolo.upper(),
+                            NewInternalPort=str(port),
+                            NewInternalClient=ip_local,
+                            NewEnabled='1',
+                            NewPortMappingDescription=descricao,
+                            NewLeaseDuration='0'
+                        )
+                        
+                        print(f"✅ Porta {port}/{protocolo} aberta com sucesso!")
+                        print(f"  {self.network.get_external_ip()}:{port} → {ip_local}:{port}")
+                        return True
+                    except Exception as e:
+                        print(f"❌ Erro ao adicionar port mapping: {e}")
+                        return False
+            
+            print(f"❌ Serviço WANIPConnection não encontrado")
+            return False
                 
         except Exception as e:
             print(f"❌ Erro ao abrir porta: {e}")
@@ -125,14 +179,29 @@ class UPNPService:
                 return False
         
         try:
-            resultado = self.upnp.deleteportmapping(port, protocolo)
-            
-            if resultado:
-                print(f"✅ Porta {port}/{protocolo} fechada com sucesso!")
-                return True
-            else:
-                print(f"❌ Falha ao fechar porta {port}/{protocolo}")
+            if not self.device:
+                print("❌ Dispositivo não configurado")
                 return False
+            
+            # Procurar pelo serviço de WANIPConnection ou WANPPPConnection
+            services = self.device.get_services()
+            for service in services:
+                if 'WANIPConnection' in service.service_type or 'WANPPPConnection' in service.service_type:
+                    try:
+                        resultado = service.DeletePortMapping(
+                            NewRemoteHost='',
+                            NewExternalPort=str(port),
+                            NewProtocol=protocolo.upper()
+                        )
+                        
+                        print(f"✅ Porta {port}/{protocolo} fechada com sucesso!")
+                        return True
+                    except Exception as e:
+                        print(f"❌ Erro ao deletar port mapping: {e}")
+                        return False
+            
+            print(f"❌ Serviço WANIPConnection não encontrado")
+            return False
                 
         except Exception as e:
             print(f"❌ Erro ao fechar porta: {e}")
@@ -147,27 +216,45 @@ class UPNPService:
                 return []
         
         try:
-            portas = self.upnp.getgenericportmapping()
-            
-            print("\n📋 Portas abertas via UPnP:")
-            if not portas or all(p is None for p in portas):
-                print("  Nenhuma porta encontrada")
+            if not self.device:
+                print("❌ Dispositivo não configurado")
                 return []
             
             portas_ativas = []
-            for i, porta in enumerate(portas):
-                if porta:
-                    info = {
-                        'porta_externa': porta[0],
-                        'protocolo': porta[1],
-                        'ip_interno': porta[2],
-                        'porta_interna': porta[3],
-                        'descricao': porta[4],
-                        'duracao': porta[5] if len(porta) > 5 else None
-                    }
-                    portas_ativas.append(info)
-                    print(f"  {i}: {info['porta_externa']}/{info['protocolo']} → "
-                          f"{info['ip_interno']}:{info['porta_interna']} ({info['descricao']})")
+            services = self.device.get_services()
+            
+            for service in services:
+                if 'WANIPConnection' in service.service_type or 'WANPPPConnection' in service.service_type:
+                    try:
+                        index = 0
+                        print("\n📋 Portas abertas via UPnP:")
+                        
+                        while True:
+                            try:
+                                result = service.GetGenericPortMappingEntry(NewPortMappingIndex=index)
+                                if not result:
+                                    break
+                                
+                                info = {
+                                    'porta_externa': result.get('NewExternalPort'),
+                                    'protocolo': result.get('NewProtocol', 'TCP'),
+                                    'ip_interno': result.get('NewInternalClient'),
+                                    'porta_interna': result.get('NewInternalPort'),
+                                    'descricao': result.get('NewPortMappingDescription', 'N/A'),
+                                    'duracao': result.get('NewLeaseDuration')
+                                }
+                                portas_ativas.append(info)
+                                print(f"  {index}: {info['porta_externa']}/{info['protocolo']} → "
+                                      f"{info['ip_interno']}:{info['porta_interna']} ({info['descricao']})")
+                                
+                                index += 1
+                            except:
+                                break
+                    except Exception as e:
+                        print(f"⚠️  Erro ao listar portas: {e}")
+            
+            if not portas_ativas:
+                print("  Nenhuma porta encontrada")
             
             return portas_ativas
             

@@ -8,7 +8,7 @@ class PeerManager:
     def __init__(self, 
                  app,
                  feedback,
-                 peer = Peer(None, "192.168.0.116", 8888, None)):
+                 peer = Peer(None, "192.168.0.113", 8888, None)):
         
         print(f"{__name__} Criado")
 

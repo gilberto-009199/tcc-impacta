@@ -1,4 +1,3 @@
-import miniupnpc
 import socket
 
 

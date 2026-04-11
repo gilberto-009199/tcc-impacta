@@ -16,10 +16,11 @@ logging.basicConfig(
 import flet as ft
 import asyncio
 
+
 from tcp.src.peersManager import PeerManager
 
 from discover.src.multicast.discoverService import DiscoverService
-from upnp.src.upnp.service import UPNPService
+#from upnp.src.upnp.service import UPNPService
 
 ft.context.disable_auto_update()
 
@@ -38,7 +39,7 @@ def main(page: ft.Page):
         height=300,
         divider_thickness=1
     )
-    upnpService = UPNPService(page, feedback)
+    #upnpService = UPNPService(page, feedback)
     discoverService = DiscoverService(page, feedback)
     
     print(f"{__name__} Antes de criar PeerManager")
@@ -51,9 +52,7 @@ def main(page: ft.Page):
         feedback.controls.append(ft.Text(f"Botão UPNP clicado", color=ft.Colors.BLACK))
         logging.info("Botão UPNP clicado")
 
-        upnpService.config();
-        upnpService.getStatus();
-        upnpService.openPort(9092);
+        upnprun(feedback)
 
         page.update()
     
@@ -112,4 +111,67 @@ def main(page: ft.Page):
     page.update()
 
 
+def upnprun(feedback):
+    try:
+        import socket
+        import upnpy
+        from upnpy.exceptions import SOAPError
+        socket.setdefaulttimeout(1.8)
+        upnp = upnpy.UPnP()
+
+        devices = upnp.discover()
+
+        device = upnp.get_igd()
+        device.get_services()
+
+
+        options = ['WANPPPConnection.1', 'WANIPConn1']
+        service = None
+        for opt in options:
+            if opt in device.services:
+                service = device[opt]
+                
+        service.AddPortMapping.get_input_arguments()
+        
+
+        try:
+
+            service.DeletePortMapping(
+                NewRemoteHost='',
+                NewExternalPort=8080,
+                NewProtocol='TCP'
+            )
+            print("Mapeamento antigo removido com sucesso.")
+            feedback.controls.append(
+                ft.Text(f"""
+                    Mapeamento antigo removido com sucesso.
+                """,
+                color=ft.Colors.BLACK))
+        except Exception as e:
+            if '718' in str(e):
+                print("Conflito detectado: A porta já está mapeada ou em uso.")
+            else:
+                raise e
+
+        service.AddPortMapping(
+            NewRemoteHost='',
+            NewExternalPort=8080,
+            NewProtocol='TCP',
+            NewInternalPort=8080,
+            NewInternalClient='192.168.0.116',
+            NewEnabled=1,
+            NewPortMappingDescription='Meu Servidor',
+            NewLeaseDuration=0
+        )
+        print("Mapeamento novo com sucesso.")
+        feedback.controls.append(
+            ft.Text(f"""
+                Mapeamento novo com sucesso.
+            """,
+            color=ft.Colors.BLACK))
+    except Exception as e:
+        if '718' in str(e):
+            print("Conflito detectado: A porta já está mapeada ou em uso.")
+        else:
+            raise e
 ft.run(main)
