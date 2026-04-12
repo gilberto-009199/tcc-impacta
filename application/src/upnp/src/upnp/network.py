@@ -2,7 +2,6 @@ import socket
 
 import logging
 
-# Isso pega a configuração que você definiu no main.py
 logger = logging.getLogger(__name__)
 
 class Network:
