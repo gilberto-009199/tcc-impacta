@@ -3,13 +3,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-basedir = os.path.dirname(os.path.abspath(__file__))
-log_path = os.path.join(basedir, "debug_tcc.log")
-
 logging.basicConfig(
     level=logging.INFO,
-    filename=log_path,  # Caminho completo
-    filemode='a',       # 'a' para anexar, 'w' para sobrescrever cada vez que abrir
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
@@ -20,7 +15,7 @@ import asyncio
 from tcp.src.peersManager import PeerManager
 
 from discover.src.multicast.discoverService import DiscoverService
-#from upnp.src.upnp.service import UPNPService
+from upnp.src.upnp.service import UPNPService
 
 ft.context.disable_auto_update()
 
@@ -39,7 +34,7 @@ def main(page: ft.Page):
         height=300,
         divider_thickness=1
     )
-    #upnpService = UPNPService(page, feedback)
+    upnpService = UPNPService(page, feedback)
     discoverService = DiscoverService(page, feedback)
     
     print(f"{__name__} Antes de criar PeerManager")
@@ -52,7 +47,10 @@ def main(page: ft.Page):
         feedback.controls.append(ft.Text(f"Botão UPNP clicado", color=ft.Colors.BLACK))
         logging.info("Botão UPNP clicado")
 
-        upnprun(feedback)
+        #upnprun(feedback)
+        upnpService.config()
+
+        upnpService.openPort(8957)
 
         page.update()
     

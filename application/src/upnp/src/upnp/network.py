@@ -1,4 +1,3 @@
-import miniupnpc
 import socket
 
 import logging
@@ -16,7 +15,6 @@ class Network:
     def _get_local_ip(self):
         """Obtém o IP local da máquina"""
         try:
-            # Cria uma conexão fake para descobrir o IP
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
@@ -26,7 +24,7 @@ class Network:
             return "127.0.0.1"
     
     def set_external_ip(self, ip):
-        """Define o IP externo (vindo do UPnP)"""
+        """Define o IP externo"""
         self.ip_externo = ip
         logger.info(f"  IP Externo: {self.ip_externo}")
     
@@ -37,3 +35,11 @@ class Network:
     def get_external_ip(self):
         """Retorna o IP externo"""
         return self.ip_externo
+    
+
+if __name__ == "__main__":
+    net = Network()
+    ipLocal = net.get_local_ip()
+    ipExternal = net.get_external_ip()
+    print(f"{ipLocal} - {ipExternal}")
+

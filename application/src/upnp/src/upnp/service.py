@@ -1,5 +1,8 @@
 import flet as ft
-import miniupnpc
+
+import socket
+import upnpy
+from upnpy.exceptions import SOAPError
 
 from .network import Network
 
@@ -18,6 +21,7 @@ class UPNPService:
         """
         self.network = Network()
         self.upnp = None
+        self.router = None
         self.dispositivo_conectado = False
         self.feedback = feedback
         logger.info("🔌 UPNPService initialized")
@@ -25,24 +29,27 @@ class UPNPService:
     def config(self):
         """Configura e descobre dispositivos UPnP na rede"""
         try:
-            self.upnp = miniupnpc.UPnP()
-            self.upnp.discoverdelay = 10000
-            # Descobrir dispositivos (timeout de 2 segundos)
+            
+            socket.setdefaulttimeout(1.8)
+            self.upnp = upnpy.UPnP()
+                        
             logger.info("🔍 Procurando dispositivos UPnP...")
             
-            num_devices = self.upnp.discover();
+            devices = self.upnp.discover()
 
-            logger.info(f"  Encontrados {num_devices} dispositivos")
+            logger.info(f"  Encontrados {devices} dispositivos")
             
-            if num_devices == 0:
+            if len(devices) == 0:
                 logger.warning("❌ Nenhum dispositivo UPnP encontrado!")
                 return False
             
             # Selecionar o gateway (roteador)
-            self.upnp.selectigd()
+            socket.setdefaulttimeout(1.8)
+            self.router = self.upnp.get_igd()
+            self.router.get_services()
             
             # Obter IP externo e atualizar o Network
-            ip_externo = self.upnp.externalipaddress()
+            ip_externo = self._get_external_ip()
             self.network.set_external_ip(ip_externo)
             
             logger.info(f"✅ UPnP configurado com sucesso!")
@@ -50,38 +57,32 @@ class UPNPService:
             logger.info(f"  IP Externo: {self.network.get_external_ip()}")
             
             self.dispositivo_conectado = True
+
             return True
             
         except Exception as e:
             logger.error(f"❌ Erro na configuração UPnP: {e}")
             return False
-    
-    def _porta_ja_existe(self, port, protocolo):
-        """Verifica se uma porta já está mapeada"""
+
+    def _get_external_ip(self):
+        """Obtém o IP externo do roteador"""
         try:
-            # O argumento '0' significa listar todas as portas
-            index = 0
-            while True:
-                try:
-                    # Tenta obter o mapeamento no índice atual
-                    mapping = self.upnp.getgenericportmapping(index)
-                    if mapping is None:
-                        break
-                    
-                    # Verifica se a porta e protocolo correspondem
-                    if (mapping[0] == port and mapping[1] == protocolo):
-                        return True, mapping
-                    
-                    index += 1
-                except:
-                    break
-                    
-            return False, None
             
+            options = ['WANPPPConnection.1', 'WANIPConn1']
+            service = None
+            for opt in options:
+                if opt in self.router.services:
+                    service = self.router[opt]
+
+            ip_externo = service.GetExternalIPAddress()['NewExternalIPAddress']
+            self.network.set_external_ip(ip_externo)
+
+            return ip_externo
+        
         except Exception as e:
-            logger.error(f"Erro ao verificar portas existentes: {e}")
-            return False, None
-    
+            logger.error(f"❌ Erro ao obter IP externo: {e}")
+            return None
+        
     def openPort(self, port=9292, protocolo='TCP', descricao="Porta aberta via Python"):
         """Abre uma porta no roteador via UPnP"""
         
@@ -90,43 +91,31 @@ class UPNPService:
             if not self.config():
                 return False
         
-        try:
-            # Verificar se a porta já existe
-            existe, mapping = self._porta_ja_existe(port, protocolo)
-            
-            if existe:
-                logger.info(f"ℹ️  Porta {port}/{protocolo} já está aberta!")
-                logger.info(f"  {mapping[2]}:{mapping[3]} → {mapping[0]}/{mapping[1]}")
-                self.feedback.controls.append(ft.Text(f"""
-                    ℹ️  Porta {port}/{protocolo} já está aberta!
-                      {mapping[2]}:{mapping[3]} → {mapping[0]}/{mapping[1]}
-                """, color=ft.Colors.BLACK))
-                return True
-            
-            # Adicionar mapeamento
-            ip_local = self.network.get_local_ip()
-            resultado = self.upnp.addportmapping(
-                port,                    # Porta externa
-                protocolo,                # Protocolo
-                ip_local,                 # IP interno (do Network)
-                port,                     # Porta interna
-                descricao,                # Descrição
-                ''                         # Remote host
-            )
-            
-            if resultado:
-                logger.info(f"✅ Porta {port}/{protocolo} aberta com sucesso!")
-                logger.info(f"  {self.network.get_external_ip()}:{port} → {ip_local}:{port}")
-                self.feedback.controls.append(ft.Text(f"✅ Porta {port}/{protocolo} aberta com sucesso!", color=ft.Colors.BLACK))
-                self.feedback.controls.append(ft.Text(f"  {self.network.get_external_ip()}:{port} → {ip_local}:{port}", color=ft.Colors.BLACK))
-                return True
-            else:
-                logger.error(f"❌ Falha ao abrir porta {port}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"❌ Erro ao abrir porta: {e}")
-            return False
+        self.closePort(port, protocolo)
+     
+        service = self.getServicesRouter()
+
+        service.AddPortMapping(
+            NewRemoteHost='',
+            NewExternalPort=port,
+            NewProtocol=protocolo,
+            NewInternalPort=port,
+            NewInternalClient=self.network.get_local_ip(),
+            NewEnabled=1,
+            NewPortMappingDescription=descricao,
+            NewLeaseDuration=0
+        )
+        
+        logger.info("Mapeamento novo com sucesso.")
+        
+        self.feedback.controls.append(
+            ft.Text(f"""
+                Mapeamento novo com sucesso.
+            """,
+            color=ft.Colors.BLACK))
+        
+        return True
+
     
     def closePort(self, port=9292, protocolo='TCP'):
         """Fecha uma porta no roteador"""
@@ -136,149 +125,38 @@ class UPNPService:
             if not self.config():
                 return False
         
+        service = self.getServicesRouter()
+
         try:
-            resultado = self.upnp.deleteportmapping(port, protocolo)
-            logger.info(f"Attempting to close port {port}/{protocolo}")
-            if resultado:
-                logger.info(f"✅ Porta {port}/{protocolo} fechada com sucesso!")
-                return True
-            else:
-                logger.error(f"❌ Falha ao fechar porta {port}/{protocolo}")
-                return False
-                
+            
+            service.DeletePortMapping(
+                NewRemoteHost='',
+                NewExternalPort=port,
+                NewProtocol=protocolo
+            )
+
+            print("Mapeamento antigo removido com sucesso.")
+            self.feedback.controls.append(
+                ft.Text(f"""
+                    Mapeamento antigo removido com sucesso.
+                """,
+                color=ft.Colors.BLACK))
+        
+            return True
+            
         except Exception as e:
             logger.error(f"❌ Erro ao fechar porta: {e}")
             return False
 
-    def listPorts(self):
-        """Lista todas as portas abertas via UPnP"""
-        
-        if not self.dispositivo_conectado:
-            logger.warning("⚠️  UPnP não configurado. Executando config()...")
-            if not self.config():
-                return []
-        
-        try:
-            portas = self.upnp.getgenericportmapping()
-            
-            logger.info("\n📋 Portas abertas via UPnP:")
-            if not portas or all(p is None for p in portas):
-                logger.info("  Nenhuma porta encontrada")
-                return []
-            
-            portas_ativas = []
-            for i, porta in enumerate(portas):
-                if porta:
-                    info = {
-                        'porta_externa': porta[0],
-                        'protocolo': porta[1],
-                        'ip_interno': porta[2],
-                        'porta_interna': porta[3],
-                        'descricao': porta[4],
-                        'duracao': porta[5] if len(porta) > 5 else None
-                    }
-                    portas_ativas.append(info)
-                    logger.info(f"  {i}: {info['porta_externa']}/{info['protocolo']} → "
-                          f"{info['ip_interno']}:{info['porta_interna']} ({info['descricao']})")
-            
-            return portas_ativas
-            
-        except Exception as e:
-            logger.info(f"❌ Erro ao listar portas: {e}")
-            return []
-    
-    def getStatus(self):
-        """Retorna o status atual do UPnP"""
-        status = {
-            'conectado': self.dispositivo_conectado,
-            'ip_local': self.network.get_local_ip(),
-            'ip_externo': self.network.get_external_ip()
-        }
-        
-        logger.info(f"\n📊 Status UPnP:")
-        logger.info(f"  Conectado: {'✅' if status['conectado'] else '❌'}")
-        logger.info(f"  IP Local: {status['ip_local']}")
-        logger.info(f"  IP Externo: {status['ip_externo'] or 'Não disponível'}")
-        
-        return status
-    
-    def quickTest(self, port=9292):
-        """Teste rápido: abre a porta, lista e fecha"""
-        logger.info("\n" + "="*50)
-        logger.info("🚀 INICIANDO TESTE RÁPIDO UPnP")
-        logger.info("="*50)
-        
-        # Mostrar status inicial
-        self.getStatus()
-        
-        # Configurar
-        if not self.config():
-            logger.info("❌ Falha na configuração UPnP")
-            return
-        
-        # Abrir porta
-        self.openPort(port)
-        
-        # Listar portas
-        self.listPorts()
-        
-        # Perguntar se quer fechar
-        resposta = input(f"\n❓ Fechar porta {port}? (s/N): ")
-        if resposta.lower() == 's':
-            self.closePort(port)
-            self.listPorts()
-        
-        logger.info("\n" + "="*50)
-        logger.info("✅ TESTE FINALIZADO")
-        logger.info("="*50)
-
-    def listPorts(self):
-        """Lista todas as portas abertas via UPnP"""
-        
-        if not self.dispositivo_conectado:
-            logger.info("⚠️  UPnP não configurado. Executando config()...")
-            if not self.config():
-                return []
-        
-        try:
-            logger.info("\n📋 Portas abertas via UPnP:")
-            
-            index = 0
-            portas_ativas = []
-            tem_portas = False
-            
-            while True:
-                try:
-                    mapping = self.upnp.getgenericportmapping(index)
-                    if mapping is None:
-                        break
-                    
-                    tem_portas = True
-                    info = {
-                        'porta_externa': mapping[0],
-                        'protocolo': mapping[1],
-                        'ip_interno': mapping[2],
-                        'porta_interna': mapping[3],
-                        'descricao': mapping[4],
-                        'duracao': mapping[5] if len(mapping) > 5 else None,
-                        'index': index
-                    }
-                    portas_ativas.append(info)
-                    
-                    logger.info(f"  {index}: {info['porta_externa']}/{info['protocolo']} → "
-                            f"{info['ip_interno']}:{info['porta_interna']} ({info['descricao']})")
-                    
-                    index += 1
-                except Exception as e:
-                    # Se der erro em um índice específico, continua tentando
-                    index += 1
-                    continue
-            
-            if not tem_portas:
-                logger.info("  Nenhuma porta encontrada")
-            
-            return portas_ativas
-            
-        except Exception as e:
-            logger.info(f"❌ Erro ao listar portas: {e}")
-            return []
+    def getServicesRouter(self):
+        """Retorna os serviços disponíveis no roteador"""
+        if self.router:
+            options = ['WANPPPConnection.1', 'WANIPConn1']
+            service = None
+            for opt in options:
+                if opt in self.router.services:
+                    service = self.router[opt]
+            return service
+        else:
+            logger.warning("⚠️  Roteador não configurado.")
+            return None
