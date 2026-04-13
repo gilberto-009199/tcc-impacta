@@ -20,16 +20,7 @@ class UPNPManager():
 
         if not user.get("online"):
             return;
-
-        ipLocal = IPUtil.getLocalIP()
-        ipExternal = IPUtil.getExternalIP()
-        
-        self.app.appData.setData(data.network,
-            {
-                "ipLocal": ipLocal,
-                "ipExternal": ipExternal
-            }
-        )
-
         if not user.get("upnp"):
             return;
+
+        pass

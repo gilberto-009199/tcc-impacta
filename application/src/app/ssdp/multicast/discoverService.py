@@ -41,7 +41,7 @@ class DiscoverService:
     async def serve(self):
         await self.server
 
-    async def find(
+    async def findPeers(
         self,
         headers = headers_default,
         wait_time = wait_time_default

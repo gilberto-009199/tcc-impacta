@@ -94,5 +94,5 @@ class PeerPage(ft.Container):
         )
 
     async def findPeers(self):
-        services = await self.app.ssdp.find()
+        services = self.app.ssdp.findPeers()
         print(f"{services}")
