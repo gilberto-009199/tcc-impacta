@@ -93,19 +93,12 @@ class Network:
         
         try:
             # Exemplo de servidor SDDP
-            # async with sddp.SddpServer() as server:
-            #     await server.advertise(headers, advertise_interval)
-            #     # Manter servidor rodando
-            #     while self.server_running:
-            #         await asyncio.sleep(1)
-            
-            # Simulação de servidor rodando
-            while self.server_running:
-                await asyncio.sleep(1)
-                async with sddp.SddpServer(device_headers=headers, advertise_interval=advertise_interval) as server:
-                    logger.info("Servidor SDDP rodando. Pressione Ctrl+C para parar.")
-                    await server.wait_for_done()  
-                logger.debug("Servidor ativo...")
+            async with sddp.SddpServer(device_headers=headers, advertise_interval=advertise_interval) as server:
+                logger.info("Servidor SDDP rodando. Pressione Ctrl+C para parar.")
+                # Manter servidor rodando
+                while self.server_running:
+                    await asyncio.sleep(1)
+                    logger.debug("Servidor ativo...")
                 
         except asyncio.CancelledError:
             logger.info("Servidor async cancelado")
@@ -113,80 +106,66 @@ class Network:
             logger.error(f"Erro no servidor async: {e}")
             raise
     
-    def search_services(self, pattern, wait_time=8, max_responses=10) -> List[Dict[str, Any]]:
+    def search_services_sync(self, pattern, wait_time=6, max_responses=10) -> List[Dict[str, Any]]:
         """
-        Busca serviços na rede (versão síncrona usando thread).
-        
-        Args:
-            pattern (str): Padrão de busca (ex: "calculator:basic").
-            wait_time (float): Tempo máximo de espera em segundos.
-            max_responses (int): Número máximo de respostas a coletar.
-        
-        Returns:
-            list: Lista de dicionários com informações dos serviços encontrados.
+        Busca serviços na rede (versão síncrona).
         """
-        logger.info("Buscando serviços com padrão '%s'...", pattern)
+        if wait_time <= 0 or max_responses <= 0:
+            raise ValueError("wait_time e max_responses devem ser positivos")
         
-        # Usar ThreadPoolExecutor para rodar a busca async em thread separada
-        import concurrent.futures
-        
-        def run_async_search():
-            # Criar novo event loop para esta thread
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(
-                    self.search_services_async(pattern, wait_time, max_responses)
-                )
-            finally:
-                loop.close()
-        
-        # Executar em thread separada
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(run_async_search)
-            try:
-                results = future.result(timeout=wait_time + 5)
-                logger.info("Busca concluída. %d serviço(s) encontrado(s).", len(results))
-                return results
-            except concurrent.futures.TimeoutError:
-                logger.error("Timeout na busca de serviços")
-                return []
-            except Exception as e:
-                logger.error(f"Erro na busca de serviços: {e}")
-                return []
-    
-    async def search_services_async(self, pattern, wait_time=6, max_responses=10) -> List[Dict[str, Any]]:
-        """
-        Busca serviços na rede (versão assíncrona).
-        
-        Args:
-            pattern (str): Padrão de busca (ex: "calculator:basic").
-            wait_time (float): Tempo máximo de espera em segundos.
-            max_responses (int): Número máximo de respostas a coletar.
-        
-        Returns:
-            list: Lista de dicionários com informações dos serviços encontrados.
-        """
-        logger.info("Buscando serviços com padrão '%s'...", pattern)
+        logger.info("Buscando serviços com padrão '%s' (timeout=%ds, max=%d)", 
+                    pattern, wait_time, max_responses)
         results = []
+        start_time = time.time()
+        
+        client = None
+        search_req = None
         
         try:
-            async with sddp.SddpClient() as client:
-                async with client.search(
-                    search_pattern=pattern, 
-                    response_wait_time=wait_time, 
-                    max_responses=max_responses
-                ) as search_req:
-                    async for response_info in search_req.iter_responses():
-                        results.append(response_info)
-                        logger.debug("Resposta recebida: %s", response_info)
-        except asyncio.CancelledError:
-            logger.warning("Busca cancelada")
+            # Cria cliente (sem context manager)
+            client = sddp.SddpClient()
+            
+            # Inicia busca (sem context manager)
+            search_req = client.search(
+                search_pattern=pattern, 
+                response_wait_time=min(wait_time, 30),
+                max_responses=max_responses
+            )
+            
+            # Itera respostas
+            for response_info in search_req.iter_responses():
+                results.append(response_info)
+                logger.debug("Resposta recebida: %s", response_info)
+                
+                if len(results) >= max_responses:
+                    logger.debug("Máximo de respostas atingido")
+                    continue
+                
+                if time.time() - start_time >= wait_time:
+                    logger.debug("Timeout total atingido")
+                    continue
+                                
         except Exception as e:
-            logger.error(f"Erro durante busca async: {e}")
+            logger.error("Erro durante busca para padrão '%s': %s", pattern, e, exc_info=True)
+        finally:
+            # Limpeza manual
+            if search_req:
+                try:
+                    search_req.close()  # Tenta fechar a requisição
+                except Exception as e:
+                    logger.debug("Erro ao fechar search_req: %s", e)
+            
+            if client:
+                try:
+                    client.close()  # Tenta fechar o cliente
+                except Exception as e:
+                    logger.debug("Erro ao fechar client: %s", e)
         
-        logger.info("Busca concluída. %d serviço(s) encontrado(s).", len(results))
+        logger.info("Busca concluída. %d serviço(s) encontrado(s) para '%s'", 
+                    len(results), pattern)
         return results
+
+
     
     def is_server_running(self) -> bool:
         """Verifica se o servidor está rodando"""

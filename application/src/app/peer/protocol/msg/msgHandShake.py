@@ -3,7 +3,7 @@ import json
 import secrets
 import struct
 
-from tcp.src.protocol.msg.msg import Msg
+from app.peer.protocol.msg.msg import Msg
 
 
 class MsgHandShake(Msg):
@@ -60,11 +60,11 @@ class MsgHandShake(Msg):
         return packet
 
     @staticmethod
-    def ofPeer(peer):
+    def ofPeer(identifier, feature):
         msg = MsgHandShake()
         msg.banner = msg.MSG_HAND_SHAKE_BANNER
-        msg.feature = peer.feature if peer.feature is not None else [0, 0, 0]
-        msg.identifier = peer.identifier if peer.identifier is not None else secrets.token_bytes(160)
+        msg.feature = feature if feature is not None else [0, 0, 0]
+        msg.identifier = identifier if identifier is not None else secrets.token_bytes(160)
         return msg
 
     @staticmethod

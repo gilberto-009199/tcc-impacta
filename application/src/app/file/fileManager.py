@@ -13,3 +13,8 @@ class FileManager():
 
     def run(self):
         logging.info(f"{__name__} run iniciado!")
+        pass
+
+    def stop(self):
+        logging.info(f"{__name__} stop iniciado!")
+        pass

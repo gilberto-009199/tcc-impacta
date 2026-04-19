@@ -13,21 +13,20 @@ class Application():
     def __init__(self):
         logging.info(f"{__name__} iniciou!")
         self.appData = AppData()
-        self.ui = UIManager(self)
-        self.ssdp = SSDPManager(self)
-        self.upnp = UPNPManager(self)
-        self.peer = PeerManager(self)
-        self.file = FileManager(self)
-        
+        self.uiManager = UIManager(self)
+        self.ssdpManager = SSDPManager(self)
+        self.upnpManager = UPNPManager(self)
+        self.peerManager = PeerManager(self)
+        self.fileManager = FileManager(self)
 
     def config(self):
         logging.info(f"{__name__} config iniciado!")
-        self.upnp.config()
-        self.ssdp.config()
-        self.peer.config()
-        self.file.config()
-        self.ui.config()
+        self.upnpManager.config()
+        self.ssdpManager.config()
+        self.peerManager.config()
+        self.fileManager.config()
+        self.uiManager.config()
 
     def run(self):
         logging.info(f"{__name__} run iniciado!")
-        self.ui.run()
+        self.uiManager.run()

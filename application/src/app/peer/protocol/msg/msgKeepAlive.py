@@ -1,7 +1,7 @@
 from email import header
 import struct
 
-from tcp.src.protocol.msg.msg import Msg
+from app.peer.protocol.msg.msg import Msg
 
 class MsgKeepAlive(Msg):
 

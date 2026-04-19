@@ -1,4 +1,6 @@
 import logging
+import random
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -11,14 +13,18 @@ class AppData():
         self.user = BehaviorSubject({
             "online": False,
             "service": False,
-            "upnp": False
+            "upnp": False,
+            "identifier": secrets.token_bytes(160),
+            "feature": [0, 0, 0]
         })
         self.network = BehaviorSubject({
             "ipLocal": False,
-            "ipExternal": False
+            "ipExternal": False,
+            'port': random.randint(10000, 65535)
         })
-        self.files = BehaviorSubject([])
-        self.peer = BehaviorSubject({})
+
+        self.macketits = BehaviorSubject([])
+        self.peers = BehaviorSubject({})
 
     def getData(self):
         return self

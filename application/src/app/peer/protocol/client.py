@@ -1,0 +1,107 @@
+import time
+import socket
+import threading
+
+import flet as ft
+
+from app.peer.protocol.peer import Peer
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class Client:
+    def __init__(self, peerManager):
+        print(f"{__name__} Criado")
+        self.peerManager = peerManager
+        self.thread = None
+        self.running = False
+        self.socket = None
+
+    def config(self, host, port):
+        logger.info(f"[CLIENTE] Config iniciado")
+        self.host = host
+        self.port = port
+        self.peer = Peer(None, self.host, self.port, self.peerManager, "client")
+
+    def run(self):
+        if self.running:
+            logger.info(f"[CLIENTE] Já está rodando")
+            return
+        self.thread = threading.Thread(target=self.connect, daemon=True)
+        self.thread.start()
+
+    def connect(self):    
+        
+        soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        soc.connect((
+            self.host,
+            self.port
+        ))
+        
+        logger.info(f"28 [CLIENTE] Conectado a {self.host}:{self.port}...")
+        
+        soc.settimeout(30)
+        soc.setblocking(False)
+        self.socket = soc
+        self.peer.setSocket(soc)
+
+        self.running = True
+        
+        logger.info(f"36 [CLIENTE] Conectado a {self.host}:{self.port}, logs:")
+
+        while self.running:
+            try:
+
+                time.sleep(0.3)        
+                if not self.peer.run():
+                    self.peerManager.removePeer(peer=self.peer)
+                    break
+                
+            except Exception as e:
+                logger.info(f"47 [CLIENTE] Erro ao executar peer {self.peer.host}:{self.peer.port}: {e}")
+                self.peerManager.removePeer(peer=self.peer)
+                break
+
+        logger.info(f"50 [CLIENTE] Desconectado de {self.host}:{self.port}")
+
+    def stop(self):
+        logger.info(f"[CLIENTE] Stop iniciado")
+        self.running = False
+        
+        # Fechar o peer
+        try:
+            self.peer.close()
+        except Exception as e:
+            logger.info(f"[CLIENTE] Erro ao fechar peer: {e}")
+        
+        # Fechar socket
+        if self.socket:
+            try:
+                self.socket.close()
+            except Exception as e:
+                logger.info(f"[CLIENTE] Erro ao fechar socket: {e}")
+        
+        # Remover peer do manager
+        try:
+            self.peerManager.removePeer(self.peer)
+        except Exception as e:
+            logger.info(f"[CLIENTE] Erro ao remover peer: {e}")
+        
+        # Aguardar thread encerrar
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=5)
+        
+        logger.info(f"[CLIENTE] Stop finalizado")
+
+    def __del__(self):
+        self.stop();
+
+    def __eq__(self, value):
+        if isinstance(value, Client):
+            return self.peer.host == value.peer.host and self.peer.port == value.peer.port
+        return False
+        
+                

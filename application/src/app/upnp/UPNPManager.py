@@ -24,3 +24,7 @@ class UPNPManager():
             return;
 
         pass
+
+    def stop(self):
+        logging.info(f"{__name__} stop iniciado!")
+        pass

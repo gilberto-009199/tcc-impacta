@@ -3,13 +3,13 @@ import time
 
 import flet as ft
 
-from tcp.src.protocol.msg.msgPieceRequest import MsgPieceRequest
-from tcp.src.protocol.msg.msgPiece import MsgPiece
-from tcp.src.protocol.msg.msgInfoRequest import MsgInfoRequest
-from tcp.src.protocol.msg.msg import Msg
-from tcp.src.protocol.msg.msgInfo import MsgInfo
-from tcp.src.protocol.msg.msgKeepAlive import MsgKeepAlive
-from tcp.src.protocol.msg.msgHandShake import MsgHandShake
+from app.peer.protocol.msg.msgPieceRequest import MsgPieceRequest
+from app.peer.protocol.msg.msgPiece import MsgPiece
+from app.peer.protocol.msg.msgInfoRequest import MsgInfoRequest
+from app.peer.protocol.msg.msg import Msg
+from app.peer.protocol.msg.msgInfo import MsgInfo
+from app.peer.protocol.msg.msgKeepAlive import MsgKeepAlive
+from app.peer.protocol.msg.msgHandShake import MsgHandShake
 
 import logging
 
@@ -25,16 +25,14 @@ class Peer:
         self.host = host
         self.port = port
         self.peerManager = peerManager
+        self.app = peerManager.app
 
-        self.identifier = None
-        self.feature = None
-        self.info = None
-
+        
         self.hasSendHandshake = False
         self.hasRecvHandshake = False
 
         self.timeKeepAlive = 0;
-        self.timeSendMsgTest = 0;
+        self.timeSendMsgInfo = 0;
 
         self.queueMsgRecv = []
         self.queueMsgSend = []
@@ -62,22 +60,16 @@ class Peer:
         # KeepAlive
         current_time = time.time()
         if current_time - self.timeKeepAlive >= 24:
-            self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] Registrando keep alive para {self.host}:{self.port}
-                """,
-                color=ft.Colors.BLACK))
             logger.info(f"{self.name}[PEER] Registrando keep alive para {self.host}:{self.port}")
             self.timeKeepAlive = current_time
             self.keepAlive()
             return True
 
-        if current_time - self.timeSendMsgTest >= 12:
-            #self.queueSend(MsgInfo())
-            #self.queueSend(MsgInfoRequest())
-            self.queueSend(MsgPiece())
-            #self.queueSend(MsgPieceRequest())
-            self.timeSendMsgTest = current_time
+        
+        # UpdateInfo
+        if current_time - self.timeSendMsgInfo >= 32:
+            self.queueSend(MsgInfoRequest())
+            self.timeSendMsgInfo = current_time
 
         self.sendMsg();
     
@@ -103,13 +95,7 @@ class Peer:
                 logger.info(f"{self.name}[PEER] ENVIANDO MENSSAGEM DE {msg.__class__.__name__} para {self.host}:{self.port}")
                 logger.info(f"""\t + HEADER: {packet[0:2].hex()} (type: {packet[0]}, length: {packet[1]})""")
                 logger.info(f"\t + BUFFER: {packet[2:].hex()}")
-                self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] ENVIANDO MENSSAGEM DE {msg.__class__.__name__} para {self.host}:{self.port}
-                    \t + HEADER: {packet[0:2].hex()} (type: {packet[0]}, length: {packet[1]})
-                    \t + BUFFER: {packet[2:].hex()}
-                """,
-                color=ft.Colors.BLACK))
+                
 
                 self.socket.send(packet)
 
@@ -118,12 +104,6 @@ class Peer:
             except Exception as e:
                 logger.info(f"{self.name}[PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
                 logger.info(f"{self.name}[PEER] failed: {e}")
-                self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] Erro ao executar peer {self.host}:{self.port}: {e}
-                    {self.name}[PEER] failed: {e}
-                """,
-                color=ft.Colors.BLACK))
                 self.disconnect()
 
     def recvMsg(self):
@@ -142,14 +122,6 @@ class Peer:
             logger.info(f"{self.name}[PEER] + type: {msg_type}")
             logger.info(f"{self.name}[PEER] + length: {payload_len}")
 
-            self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] Recebido header from {self.host}:{self.port}: {header.hex()}
-                    {self.name}[PEER] + type: {msg_type}
-                    {self.name}[PEER] + length: {payload_len}
-                """,
-                color=ft.Colors.BLACK))
-
             buffer = header + self.socket.recv(payload_len)
             self.processMsg(msg_type, payload_len, buffer)
 
@@ -159,12 +131,6 @@ class Peer:
             logger.info(f"{self.name}[PEER] Erro ao executar peer {self.host}:{self.port}: {e}")
             logger.info(f"{self.name}[PEER] failed: {e}")
 
-            self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] Erro ao executar peer {self.host}:{self.port}: {e}
-                    {self.name}[PEER] failed: {e}
-                """,
-                color=ft.Colors.BLACK))
             # Pegamos o rastro (traceback) que está guardado dentro do 'e'
             tb = e.__traceback__
             
@@ -176,11 +142,7 @@ class Peer:
             linha = tb.tb_lineno
             arquivo = tb.tb_frame.f_code.co_filename
             logger.info(f"{self.name}[PEER] [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
-            self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}
-                """,
-                color=ft.Colors.BLACK))
+           
             self.disconnect()
 
     def processMsg(self, msg_type, payload_len, buffer):
@@ -218,6 +180,22 @@ class Peer:
 
                 data = MsgInfoRequest.ofPacket(buffer);
                 logger.info(f"\t + MSG : {data}")
+                appData = self.app.appData.getData()
+
+                user = appData.user.value;
+                network = appData.network.value;
+                macketits = appData.macketits.value;
+                peers = appData.peers.value;
+
+                identifier = user.get("identifier", None)
+                feature = user.get("feature", None)
+
+                self.queueSend(MsgInfo(
+                    feature=feature,
+                    identifier=identifier,
+                    macketit=macketits,
+                    peers=peers
+                ))
 
             case Msg.MSG_TYPE_HAND_SHAKE:
                 logger.info(f"{self.name}[PEER] Recebido handshake de {self.host}:{self.port}")
@@ -250,15 +228,6 @@ class Peer:
                 data = Msg.ofPacket(buffer);
                 logger.info(f"\t + MSG : {data}")
 
-
-        self.peerManager.feedback.controls.append(
-                ft.Text(f"""
-                    {self.name}[PEER] Recebido MSG de {self.host}:{self.port}
-                    \t + HEADER: type: {msg_type}, length: {payload_len})
-                    \t + BUFFER: {buffer.hex()}
-                    \t + MSG : {data}
-                """,
-                color=ft.Colors.BLACK))
         
     def keepAlive(self):
         try:
@@ -301,7 +270,14 @@ class Peer:
 
             if not self.hasSendHandshake:
                 logger.info(f"{self.name}[PEER] Enviando handshake para {self.host}:{self.port}")
-                handshake_msg = MsgHandShake.ofPeer(self.peerManager.peer)
+                appData = self.app.appData.getData()
+
+                user = appData.user.value;
+
+                identifier = user.get("identifier", None)
+                feature = user.get("feature", None)
+
+                handshake_msg = MsgHandShake.ofPeer(identifier=identifier, feature=feature)
                 self.socket.send(handshake_msg.toPacket())
                 self.hasSendHandshake = True
 

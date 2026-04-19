@@ -1,4 +1,6 @@
+import base64
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,8 @@ headers_default = {
     "Proxies": "test-device",
     "Manufacturer": "Acme",
     "Model": "TestDevPlus",
-    "Satus"
+    "Port": 97777,
+    "Identifier": "==9hu43r39h4r93h4534h5oiuh",
     "Driver": "test-device_Acme_TestDevPlus.c4i",
 };
 
@@ -26,6 +29,7 @@ class SSDPManager():
         
         data = app.appData.getData()
         data.user.subscribe(on_next=lambda val: self.config())
+        data.network.subscribe(on_next=lambda val: self.config())
 
     def config(self):
         logging.info(f"{__name__} config iniciado!")
@@ -34,10 +38,15 @@ class SSDPManager():
         user = data.user.value
         
         if not user.get("online"):
+            self.stop()
             return;
 
         if not user.get("service"):
+            self.stop()
             return;
+
+        headers_default["Port"] = data.network.value.get("port", headers_default["Port"])
+        headers_default["Identifier"] = base64.b64encode(data.user.value.get("identifier", headers_default["Identifier"])).decode('utf-8')
 
         self.run()
 
@@ -60,26 +69,38 @@ class SSDPManager():
             logger.info("Servidor SSDP parado")
         except Exception as e:
             logger.error(f"Erro ao parar servidor SSDP: {e}")
-    
-    def findPeers(self, headers= headers_default):
+
+    async def findPeers(self, headers= headers_default):
         """
         Busca serviços na rede (síncrono)
         """
         data = self.app.appData.getData()
         networkData = data.network.value
-        myIPS = [networkData.get("ipLocal"), networkData.get("ipExternal")]
+        ipList = networkData.get("ips")
 
         try:
-            services = self.network.search_services(headers["Type"])
+          
+            services = self.network.search_services_sync(headers["Type"], wait_time_default, 10)
+            
             logger.info(f"Encontrados {len(services)} serviços")
+
             servicesFilter = []
+
             for svc in services:
                 src_addr = getattr(svc, 'src_addr', False)
+                datagram = getattr(svc, 'datagram', False)
+                ip, port = src_addr
+                port = datagram.headers.get('Port', '')
+                identifier = datagram.headers.get('Identifier', '')
+                data = (
+                    ip,
+                    port,
+                    identifier
+                )
+
                 if src_addr:
-                    ip, port = src_addr
-                    print(f"Serviço encontrado em {ip}:{port}")
-                    if ip not in myIPS:
-                        servicesFilter.append(src_addr)
+                    #if ip not in ipList:
+                    servicesFilter.append(data)
 
             return servicesFilter
         except Exception as e:
