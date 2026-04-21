@@ -16,9 +16,28 @@ class PeerPage(ft.Container):
         # Centro
         self.center = fm.MapLatitudeLongitude(-23.5505, -46.6333)
         
-        # Camada de markers vazia
-        self.marker_layer = fm.MarkerLayer(markers=[])
-        
+        self.marker_layer = fm.MarkerLayer(markers=[
+            fm.Marker(
+                width=128,
+                height=128,
+                expand=True,
+                coordinates=self.center,
+                content=ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(ft.Icons.COMPUTER, color=ft.Colors.GREY, size=64),
+                            ft.Text("You", size=12, weight=ft.FontWeight.BOLD)
+                        ],
+                        spacing=5,
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    bgcolor=ft.Colors.TRANSPARENT,
+                    border_radius=3
+                )
+            )
+        ])
+        self.lines_layer = fm.PolylineLayer(polylines=[])
+
         self.dialog = ft.AlertDialog(
             title=ft.Text(f"Peer: ", size=18, weight=ft.FontWeight.BOLD),
             content=[],
@@ -55,7 +74,7 @@ class PeerPage(ft.Container):
                     fm.Map(
                         expand=True,
                         initial_center=self.center,
-                        layers=[self.marker_layer]
+                        layers=[self.lines_layer, self.marker_layer]
                     )
                 ],
                 expand=True
@@ -182,10 +201,29 @@ class PeerPage(ft.Container):
         services = await self.app.ssdpManager.findPeers()
         print(f"Services: {services}")
         
-        markers = []
+        markers = [
+            fm.Marker(
+                width=128,
+                height=128,
+                expand=True,
+                coordinates=self.center,
+                content=ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(ft.Icons.COMPUTER, color=ft.Colors.GREY, size=64),
+                            ft.Text("You", size=12, weight=ft.FontWeight.BOLD)
+                        ],
+                        spacing=5,
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    bgcolor=ft.Colors.TRANSPARENT,
+                    border_radius=3
+                )
+            )
+        ]
         positions = [] 
         
-        MIN_DISTANCE = 0.008  # ~800 metros
+        MIN_DISTANCE = 0.010
         
         def calculate_distance(lat1, lon1, lat2, lon2):
             """Calcula distância aproximada entre duas coordenadas em graus"""
@@ -212,6 +250,29 @@ class PeerPage(ft.Container):
             lon = self.center.longitude + random.uniform(-0.05, 0.05)
             return (lat, lon)
         
+        self.marker_layer.markers = []
+        self.lines_layer.polylines = []
+
+        self.marker_layer.markers.append(
+            fm.Marker(
+                width=128,
+                height=128,
+                expand=True,
+                coordinates=self.center,
+                content=ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Icon(ft.Icons.COMPUTER_OUTLINED, color=ft.Colors.GREY, size=72),
+                            ft.Text("You", size=12, weight=ft.FontWeight.BOLD)
+                        ],
+                        spacing=5,
+                        alignment=ft.MainAxisAlignment.CENTER
+                    ),
+                    bgcolor=ft.Colors.TRANSPARENT,
+                )
+            )
+        )
+
         for peer in services:
             ip, port, identifier = peer
             
@@ -220,7 +281,7 @@ class PeerPage(ft.Container):
             positions.append((lat, lon))
             
             # Cria o marker
-            markers.append(
+            self.marker_layer.markers.append(
                 fm.Marker(
                     width=128,
                     height=48,
@@ -249,7 +310,25 @@ class PeerPage(ft.Container):
                     )   
                 )
             )
+
+            connected = True
+            if connected:
+                self.lines_layer.polylines.append(
+                    fm.PolylineMarker(
+                        border_stroke_width=3,
+                        border_color=ft.Colors.GREEN,
+                        gradient_colors=[
+                            ft.Colors.BLACK,
+                            ft.Colors.BLACK,
+                        ],
+                        coordinates=[
+                            self.center,
+                            fm.MapLatitudeLongitude(lat, lon)
+                        ],
+                    )
+                )
     
-        self.marker_layer.markers = markers
+            
         self.marker_layer.update()
+        self.lines_layer.update()
     
