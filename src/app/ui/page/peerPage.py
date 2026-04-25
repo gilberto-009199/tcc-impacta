@@ -37,14 +37,42 @@ class PeerPage(ft.Container):
         ])
         self.lines_layer = fm.PolylineLayer(polylines=[])
 
-        self.dialog = ft.AlertDialog(
+        self.dialogPeerConnect = ft.AlertDialog(
             title=ft.Text(f"Peer: ", size=18, weight=ft.FontWeight.BOLD),
             content=[],
             actions=[
                 ft.TextButton(
                     "Fechar",
                     icon=ft.Icons.CLOSE,
-                    on_click=lambda e: self.close_dialog(self.dialog)
+                    on_click=lambda e: self.close_dialog(self.dialogPeerConnect)
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            open=False
+        )
+
+        self.dialogPeerFiles = ft.AlertDialog(
+            title=ft.Text(f"Arquivos do Peer: ", size=18, weight=ft.FontWeight.BOLD),
+            content=[],
+            actions=[
+                ft.TextButton(
+                    "Fechar",
+                    icon=ft.Icons.CLOSE,
+                    on_click=lambda e: self.close_dialog(self.dialogPeerFiles)
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            open=False
+        )
+
+        self.dialogPeerClose = ft.AlertDialog(
+            title=ft.Text(f"Desconectar do Peer: ", size=18, weight=ft.FontWeight.BOLD),
+            content=[],
+            actions=[
+                ft.TextButton(
+                    "Fechar",
+                    icon=ft.Icons.CLOSE,
+                    on_click=lambda e: self.close_dialog(self.dialogPeerClose)
                 ),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -89,7 +117,9 @@ class PeerPage(ft.Container):
         super().__init__(
             content=ft.Stack([
                 ft.Column([
-                        self.dialog,
+                        self.dialogPeerConnect,
+                        self.dialogPeerFiles,
+                        self.dialogPeerClose,
                         ft.Row([
                                 ft.Divider(),
                                 ft.Container(expand=True),
@@ -124,7 +154,7 @@ class PeerPage(ft.Container):
            page.update()
         data.peers.subscribe(on_next=reactPeers)
 
-    def modalPeer(self, peer):
+    def showDialogPeerConnect(self, peer):
         """Mostra o modal com informações do peer"""
         ip, port, identifier = peer
         
@@ -134,11 +164,11 @@ class PeerPage(ft.Container):
         connect_button = ft.ElevatedButton(
             "Conectar",
             icon=ft.Icons.CONNECT_WITHOUT_CONTACT,
-            on_click=lambda e: self.connect_to_peer(ip, port, loading, connect_button, self.dialog)
+            on_click=lambda e: self.connect_to_peer(ip, port, loading, connect_button, self.dialogPeerConnect)
         )
 
         # Abre o diálogo
-        self.dialog.content=ft.Column([
+        self.dialogPeerConnect.content=ft.Column([
             ft.Row([
                 ft.Icon(ft.Icons.COMPUTER, color=ft.Colors.GREEN, size=30),
                 ft.Text(f"Peer {ip}", size=18, weight=ft.FontWeight.BOLD),
@@ -184,10 +214,99 @@ class PeerPage(ft.Container):
             ], alignment=ft.MainAxisAlignment.END, spacing=10),
         ], spacing=10, tight=True)
         
-        self.dialog.open = True
+        self.dialogPeerConnect.open = True
         self.page.update()
         
         logger.info("Modal atualizado na página")
+
+    def showDialogPeerFiles(self, peer):
+        """Mostra informações detalhadas do peer"""
+        peer_id = peer.get("identifier", peer.get("id", "Unknown"))
+        peer_ip = peer.get("ip", peer.get("host", "Unknown"))
+        peer_port = peer.get("port", "Unknown")
+        peer_name = peer.get("name", peer_ip + ":" + str(peer_port))
+        
+        # Cria dialog com informações
+        self.dialogPeerFiles.content = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.COMPUTER, size=40, color=ft.Colors.BLUE_400),
+                    ft.Text(peer_name, size=16, weight=ft.FontWeight.BOLD)
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                
+                ft.Divider(),
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.DNS, color=ft.Colors.BLUE),
+                    title=ft.Text("IP Address", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(peer_ip, selectable=True),
+                ),
+                
+                # list files
+                
+            ], spacing=5),
+            width=400,
+            padding=10
+        )
+        
+        self.dialogPeerFiles.open = True
+        self.page.update()
+
+    def showDialogPeerClose(self, peer):
+        """Mostra informações detalhadas do peer"""
+        peer_id = peer.get("identifier", peer.get("id", "Unknown"))
+        peer_ip = peer.get("ip", peer.get("host", "Unknown"))
+        peer_port = peer.get("port", "Unknown")
+        peer_name = peer.get("name", peer_ip + ":" + str(peer_port))
+        
+        # Cria dialog com informações
+        self.dialogPeerClose.content = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.COMPUTER, size=40, color=ft.Colors.BLUE_400),
+                    ft.Text(peer_name, size=16, weight=ft.FontWeight.BOLD)
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                
+                ft.Divider(),
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.DNS, color=ft.Colors.BLUE),
+                    title=ft.Text("IP Address", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(peer_ip, selectable=True),
+                ),
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.POWER_INPUT, color=ft.Colors.ORANGE),
+                    title=ft.Text("Porta", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(str(peer_port)),
+                ),
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.QR_CODE_SCANNER, color=ft.Colors.PURPLE),
+                    title=ft.Text("Identificador", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(peer_id, selectable=True),
+                ),
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.UPDATE, color=ft.Colors.GREEN),
+                    title=ft.Text("Status", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text("Online" if peer.get("online", True) else "Offline"),
+                ),
+                
+                ft.Row([
+                    ft.TextButton(
+                        "Desconectar Peer",
+                        icon=ft.Icons.CLOSE
+                    )
+                ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+            ], spacing=5),
+            width=400,
+            padding=10
+        )
+        
+        self.dialogPeerClose.open = True
+        self.page.update()
+
 
     def connect_to_peer(self, ip, port, loading, button, dialog):
         """Tenta conectar ao peer"""
@@ -221,16 +340,6 @@ class PeerPage(ft.Container):
         """Fecha o diálogo"""
         dialog.open = False
         self.page.update()
-
-    def copy_to_clipboard(self, text):
-        """Copia texto para área de transferência"""
-        self.page.set_clipboard(text)
-        self.page.show_snack_bar(
-            ft.SnackBar(
-                content=ft.Text(f"✅ IP {text} copiado!"),
-                duration=2000
-            )
-        )
 
     async def findPeers(self):
         
@@ -331,7 +440,7 @@ class PeerPage(ft.Container):
                     expand=True,
                     coordinates=fm.MapLatitudeLongitude(lat, lon),
                     content=ft.GestureDetector(
-                        on_tap=lambda x, ip=ip, port=port, identifier=identifier: self.modalPeer((ip, port, identifier)),
+                        on_tap=lambda x, ip=ip, port=port, identifier=identifier: self.showDialogPeerConnect((ip, port, identifier)),
                         content=ft.Container(
                             content=ft.Row(
                                 [
@@ -405,7 +514,7 @@ class PeerPage(ft.Container):
                 for peer in peers:
                     # Extrai informações do peer (ajuste conforme a estrutura dos seus dados)
                     peer_id = peer.get("identifier","Unknown")
-                    peer_ip = peer.get("ip", "Unknown")
+                    peer_ip = peer.get("ip", peer.get("host", "Unknown"))
                     peer_port = peer.get("port", "Unknown")
                     peer_name = peer.get("name", peer_id)
                     
@@ -447,7 +556,6 @@ class PeerPage(ft.Container):
                                         ft.Text(f"{peer_ip}:{peer_port}", size=10, color=ft.Colors.GREY_400, selectable=True),
                                     ], spacing=4),
                                     
-                                    # Identificador (se existir)
                                     ft.Row([
                                         ft.Icon(ft.Icons.COMPUTER, size=12, color=ft.Colors.GREY_400),
                                         ft.Text(peer_id[:20] + "..." if len(peer_id) > 20 else peer_id, 
@@ -466,21 +574,14 @@ class PeerPage(ft.Container):
                                     icon_size=18,
                                     tooltip="Ver arquivos",
                                     icon_color=ft.Colors.BLUE,
-                                    on_click=lambda e, p=peer: self.show_peer_files(p)
+                                    on_click=lambda e, p=peer: self.showDialogPeerFiles(p)
                                 ),
                                 ft.IconButton(
                                     icon=ft.Icons.CLOSE,
                                     icon_size=18,
                                     tooltip="Desconectar",
                                     icon_color=ft.Colors.RED_400,
-                                    on_click=lambda e, ip=peer_ip, port=peer_port: self.disconnect_peer(ip, port)
-                                ),
-                                ft.IconButton(
-                                    icon=ft.Icons.INFO,
-                                    icon_size=18,
-                                    tooltip="Informações",
-                                    icon_color=ft.Colors.ORANGE_400,
-                                    on_click=lambda e, p=peer: self.show_peer_info(p)
+                                    on_click=lambda e, p=peer: self.showDialogPeerClose(p)
                                 )
                             ], alignment=ft.MainAxisAlignment.SPACE_EVENLY, spacing=5)
                         ], spacing=6),
@@ -516,83 +617,12 @@ class PeerPage(ft.Container):
 
             logger.info(f"Erro ao executar: {e}")
             
-
-    def show_peer_info(self, peer):
-        """Mostra informações detalhadas do peer"""
-        peer_id = peer.get("identifier", peer.get("id", "Unknown"))
-        peer_ip = peer.get("ip", peer.get("address", "Unknown"))
-        peer_port = peer.get("port", "Unknown")
-        peer_name = peer.get("name", peer_id)
-        
-        # Cria dialog com informações
-        info_dialog = ft.AlertDialog(
-            title=ft.Text(f"Informações do Peer", size=18, weight=ft.FontWeight.BOLD),
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([
-                        ft.Icon(ft.Icons.COMPUTER, size=40, color=ft.Colors.BLUE_400),
-                        ft.Text(peer_name, size=16, weight=ft.FontWeight.BOLD)
-                    ], alignment=ft.MainAxisAlignment.CENTER),
-                    
-                    ft.Divider(),
-                    
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.DNS, color=ft.Colors.BLUE),
-                        title=ft.Text("IP Address", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(peer_ip, selectable=True),
-                    ),
-                    
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.POWER_INPUT, color=ft.Colors.ORANGE),
-                        title=ft.Text("Porta", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(str(peer_port)),
-                    ),
-                    
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.QR_CODE_SCANNER, color=ft.Colors.PURPLE),
-                        title=ft.Text("Identificador", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(peer_id, selectable=True),
-                    ),
-                    
-                    ft.ListTile(
-                        leading=ft.Icon(ft.Icons.UPDATE, color=ft.Colors.GREEN),
-                        title=ft.Text("Status", weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text("Online" if peer.get("online", True) else "Offline"),
-                    ),
-                    
-                    ft.Row([
-                        ft.TextButton(
-                            "Copiar IP",
-                            icon=ft.Icons.COPY,
-                            on_click=lambda e: self.copy_to_clipboard(peer_ip)
-                        ),
-                        ft.TextButton(
-                            "Copiar ID",
-                            icon=ft.Icons.COPY,
-                            on_click=lambda e: self.copy_to_clipboard(peer_id)
-                        ),
-                    ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
-                ], spacing=5),
-                width=400,
-                padding=10
-            ),
-            actions=[
-                ft.TextButton(
-                    "Fechar",
-                    icon=ft.Icons.CLOSE,
-                    on_click=lambda e: self.close_dialog(info_dialog)
-                )
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
-            open=True
-        )
-        
-        self.page.dialog = info_dialog
-        self.page.update()
+    
 
     def copy_to_clipboard(self, text):
         """Copia texto para área de transferência"""
-        self.page.set_clipboard(text)
+        clipboard = ft.Clipboard()
+        clipboard.set_text(text)
         self.page.show_snack_bar(
             ft.SnackBar(
                 content=ft.Text(f"✅ Copiado: {text}"),
