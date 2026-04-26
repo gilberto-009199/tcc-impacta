@@ -7,6 +7,10 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
+import signal
+import sys
+import atexit
+
 from app.util.IPUtil import IPUtil
 
 logger = logging.getLogger(__name__)
@@ -88,6 +92,7 @@ class Network:
         self._headers: Dict[str, Any] = {}
         self._advertise_interval = 60
         self._lock = threading.Lock()
+
         logger.info("Network instanciado (multicast %s:%s)", MCAST_GROUP, MCAST_PORT)
 
     def _open_mcast_socket(self) -> socket.socket:
@@ -106,6 +111,16 @@ class Network:
         s.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, struct.pack("B", 1))
         s.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, struct.pack("B", 1))
+
+        def shutdown_handler(signum, frame):
+            logger.info(f"Sinal {signum} recebido, derrubando servidor multicast...")
+            self.stop_server()
+            import sys
+            sys.exit(0)
+        
+        signal.signal(signal.SIGINT, shutdown_handler)
+        signal.signal(signal.SIGTERM, shutdown_handler)
+
         return s
 
     def _send_multicast(self, payload: bytes) -> None:

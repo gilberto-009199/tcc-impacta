@@ -173,6 +173,18 @@ class Peer:
                 data = MsgInfo.ofPacket(buffer);
                 logger.info(f"\t + MSG : {data}")
 
+                appData = self.app.appData.getData()
+
+                peers = appData.peers.value;
+            
+                for p in peers:
+                    if p.get("identifier", None) == data.identifier:
+                        p["feature"] = data.feature
+                        p["files"] = data.files
+
+                appData.peers.on_next(peers)
+                    
+
             case Msg.MSG_TYPE_INFO_REQUEST:
                 logger.info(f"{self.name}[PEER] Recebido info request de {self.host}:{self.port}")
                 logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
@@ -347,15 +359,16 @@ class Peer:
             self.socket.close()
         self.socket = None
 
-    def __eq__(self, other):
+    def __eq__(self, value):
         
-        if not isinstance(other, Peer):
-            return False
+        if isinstance(value, Peer):
+            return self.host == value.host and self.port == value.port
         
-        return (
-            self.host == other.host
-        and 
-            self.port == other.port
-        and
-            self.identifier == other.identifier
-        )
+        if hasattr(value, "identifier"):
+            return self.identifier == value.identifier
+        
+        if isinstance(value, dict) and value.get("identifier", None):
+            return self.identifier == value["identifier"]
+        
+        
+        return False

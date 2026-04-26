@@ -16,6 +16,7 @@ class Server:
         print(f"{__name__} Criado")
         logger.info(f"[SERVIDOR] Criado")
         self.peerManager = peerManager
+        self.app = peerManager.app
         self.thread = None
         self.host = "0.0.0.0"
         self.port = random.randint(10000, 65535)
@@ -80,18 +81,40 @@ class Server:
         except Exception as e:
             logger.info(f"58 [SERVIDOR] Erro ao conectar peer novo: {e}")
 
+    def removePeer(self, peer):
+        if peer in self.peers:
+            try:
+                index = self.peers.index(peer)
+                peer = self.peers[index]
+                peer.disconnect()
+                peers = self.app.appData.peers.value
+                for p in peers:
+                    if p.get("identifier") == peer.identifier:
+                        peers.remove(p)
+                        break
+                self.app.appData.peers.on_next(peers)
+            except Exception as e:
+                logger.info(f"68 [SERVIDOR] Erro ao fechar conexão do peer: {e}")
+            self.peers.remove(peer)
+            
+
     def runPeers(self):
 
         for peer in self.peers:
             try:
+               
+                if peer.socket and peer.socket._closed:
+                    self.removePeer(peer)
+                    continue
+                
                 logger.info(f"63 [SERVIDOR] Conectado a {peer.host}:{peer.port}, logs:")
                 if not peer.run():
-                    self.peers.remove(peer)
+                    self.removePeer(peer)
             except BlockingIOError:
                 pass
             except Exception as e:
                 logger.info(f"70 [SERVIDOR] Erro ao executar peer {peer.host}:{peer.port}: {e}")
-                self.peers.remove(peer)
+                self.removePeer(peer)
 
     def connect(self, s, host, port):
         
@@ -108,7 +131,7 @@ class Server:
         # Fechar todos os peers
         for peer in self.peers:
             try:
-                peer.close()
+                peer.disconnect()
             except Exception as e:
                 logger.info(f"[SERVIDOR] Erro ao fechar peer: {e}")
         

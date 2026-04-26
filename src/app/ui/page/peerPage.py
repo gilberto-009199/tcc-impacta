@@ -102,7 +102,7 @@ class PeerPage(ft.Container):
             ], spacing=10),
             width=300,
             height=450,
-            bgcolor=ft.Colors.BLACK54,
+            bgcolor=ft.Colors.BLACK_54,
             border_radius=10,
             padding=10,
             right=10,
@@ -110,7 +110,7 @@ class PeerPage(ft.Container):
             shadow=ft.BoxShadow(
                 spread_radius=1,
                 blur_radius=10,
-                color=ft.Colors.BLACK26
+                color=ft.Colors.BLACK_26
             )
         )
 
@@ -156,7 +156,9 @@ class PeerPage(ft.Container):
 
     def showDialogPeerConnect(self, peer):
         """Mostra o modal com informações do peer"""
-        ip, port, identifier = peer
+        ip = peer.get('ip')
+        port = peer.get('port')
+        identifier = peer.get('identifier')
         
         logger.info(f"Abrindo modal para: IP={ip}, Porta={port}, ID={identifier}")
         
@@ -221,11 +223,12 @@ class PeerPage(ft.Container):
 
     def showDialogPeerFiles(self, peer):
         """Mostra informações detalhadas do peer"""
-        peer_id = peer.get("identifier", peer.get("id", "Unknown"))
+
         peer_ip = peer.get("ip", peer.get("host", "Unknown"))
         peer_port = peer.get("port", "Unknown")
         peer_name = peer.get("name", peer_ip + ":" + str(peer_port))
-        
+        peer_files = peer.get("files", [])
+
         # Cria dialog com informações
         self.dialogPeerFiles.content = ft.Container(
             content=ft.Column([
@@ -243,7 +246,12 @@ class PeerPage(ft.Container):
                 ),
                 
                 # list files
-                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.FILE_COPY, color=ft.Colors.GREEN),
+                    title=ft.Text("Arquivos", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(", ".join(peer_files) if peer_files else "Nenhum arquivo disponível")
+                )
+
             ], spacing=5),
             width=400,
             padding=10
@@ -296,7 +304,8 @@ class PeerPage(ft.Container):
                 ft.Row([
                     ft.TextButton(
                         "Desconectar Peer",
-                        icon=ft.Icons.CLOSE
+                        icon=ft.Icons.CLOSE,
+                        on_click=lambda e: self.app.peerManager.removePeer(peer)
                     )
                 ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
             ], spacing=5),
@@ -306,6 +315,7 @@ class PeerPage(ft.Container):
         
         self.dialogPeerClose.open = True
         self.page.update()
+
 
 
     def connect_to_peer(self, ip, port, loading, button, dialog):
@@ -349,7 +359,13 @@ class PeerPage(ft.Container):
     
         services = await self.app.ssdpManager.findPeers()
         
-        services and len(services) > 0 and self.updateMap(services)
+        appData = self.app.appData
+        data = appData.getData()
+        peers = data.peers.value
+        self.updatePeers(peers)
+
+        all_items = peers + services
+        self.updateMap(all_items)
 
     def updateMap(self, services = []):
         try:
@@ -440,7 +456,7 @@ class PeerPage(ft.Container):
                     expand=True,
                     coordinates=fm.MapLatitudeLongitude(lat, lon),
                     content=ft.GestureDetector(
-                        on_tap=lambda x, ip=ip, port=port, identifier=identifier: self.showDialogPeerConnect((ip, port, identifier)),
+                        on_tap=lambda x, ip=ip, port=port, identifier=identifier: self.showDialogPeerConnect(peer),
                         content=ft.Container(
                             content=ft.Row(
                                 [
@@ -483,6 +499,7 @@ class PeerPage(ft.Container):
         self.marker_layer.update()
         self.lines_layer.update()
         self.page.update()
+        self.updatePeers(peers)
 
     def updatePeers(self, peers):
         try:
@@ -505,7 +522,7 @@ class PeerPage(ft.Container):
                             ft.Icon(ft.Icons.PERSON_OFF, size=40, color=ft.Colors.GREY_400),
                             ft.Text("Nenhum peer conectado", size=12, color=ft.Colors.GREY_400),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=5),
-                        alignment=ft.alignment.center,
+                        alignment=ft.Alignment.CENTER,
                         padding=20
                     )
                 )
@@ -616,9 +633,11 @@ class PeerPage(ft.Container):
             logger.info(f" Erro no arquivo: {arquivo}, linha: {linha}")
 
             logger.info(f"Erro ao executar: {e}")
-            
-    
 
+            self.peers_list.controls.update()
+            if hasattr(self, 'page') and self.page:
+                self.page.update()
+            
     def copy_to_clipboard(self, text):
         """Copia texto para área de transferência"""
         clipboard = ft.Clipboard()

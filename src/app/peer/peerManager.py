@@ -18,8 +18,6 @@ class PeerManager():
         data = app.appData.getData()
         data.user.subscribe(on_next=lambda val: self.config())
 
-        
-
     def config(self):
         logging.info(f"{__name__} config iniciado!")
 
@@ -46,7 +44,6 @@ class PeerManager():
     
         self.run()
 
-
     def createPeer(self, ip, port):
         client = Client(peerManager=self)
         client.config(host=ip, port=port)
@@ -54,10 +51,28 @@ class PeerManager():
         client.run()
 
     def removePeer(self, peer):
+        
         if peer in self.clients:
-            client =  self.clients[peer]
+            index =  self.clients.index(peer)
+            client = self.clients[index]
             client.stop()
-            del self.clients[peer]
+            if len(self.clients) > index:
+                try:
+                    self.clients.remove(client)
+                    self.clients.pop(index)
+                except Exception as e:
+                    logger.info(f"[PEER MANAGER] Erro ao remover cliente: {e}")
+
+        if peer in self.server.peers:
+            self.server.removePeer(peer)
+        
+        peers = self.app.appData.peers.value
+        for p in peers:
+            if p.get("identifier") == peer.get("identifier"):
+                peers.remove(p)
+                break
+        self.app.appData.peers.on_next(peers)
+
 
     def run(self):
         logging.info(f"{__name__} run iniciado!")

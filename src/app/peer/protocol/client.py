@@ -15,6 +15,7 @@ class Client:
     def __init__(self, peerManager):
         print(f"{__name__} Criado")
         self.peerManager = peerManager
+        self.app = peerManager.app
         self.thread = None
         self.running = False
         self.socket = None
@@ -73,7 +74,13 @@ class Client:
         
         # Fechar o peer
         try:
-            self.peer.close()
+            self.peer.disconnect()
+            peers = self.app.appData.peers.value
+            for p in peers:
+                if p.get("identifier") == self.peer.identifier:
+                    peers.remove(p)
+                    break
+            self.app.appData.peers.on_next(peers)
         except Exception as e:
             logger.info(f"[CLIENTE] Erro ao fechar peer: {e}")
         
@@ -84,15 +91,12 @@ class Client:
             except Exception as e:
                 logger.info(f"[CLIENTE] Erro ao fechar socket: {e}")
         
-        # Remover peer do manager
-        try:
-            self.peerManager.removePeer(self.peer)
-        except Exception as e:
-            logger.info(f"[CLIENTE] Erro ao remover peer: {e}")
-        
         # Aguardar thread encerrar
         if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=5)
+            try:
+                self.thread.join(timeout=5)
+            except Exception as e:
+                logger.info(f"[CLIENTE] Erro ao aguardar thread: {e}")
         
         logger.info(f"[CLIENTE] Stop finalizado")
 
@@ -102,6 +106,19 @@ class Client:
     def __eq__(self, value):
         if isinstance(value, Client):
             return self.peer.host == value.peer.host and self.peer.port == value.peer.port
-        return False
+        
+        if isinstance(value, Peer):
+            return self.peer.identifier == value.identifier
+        
+        if hasattr(value, "identifier"):
+            return self.peer.identifier == value.identifier
+        
+        if isinstance(value, dict) and value.get("identifier", None):
+            return self.peer.identifier == value["identifier"]
+        
+        #if value.get("identifier", None):
+        #    return self.peer.identifier == value.get("identifier", None)
+        
+        return False    
         
                 
