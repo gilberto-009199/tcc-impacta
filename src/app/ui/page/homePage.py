@@ -122,17 +122,21 @@ class HomePage(ft.Container):
 
     async def showUploadDialog(self):
         
-        file_picker = ft.FilePicker(on_upload=lambda e: print(e.files))
-        self.page.overlay.append(file_picker)
-        self.page.update()
-
-
+        async def pick_files(e):
+            file_picker = ft.FilePicker()
+            files_list = await file_picker.pick_files(allow_multiple=True)
+            print("list =", files_list)
+            if files_list:
+                print(", ".join([f.name for f in files_list]))
+            else:
+                print("Cancelled!")
+        
         self.dialogUpload.content = ft.Column([
             ft.Text("Em breve!"),
             ft.Button(
                 "Selecionar Arquivo",
                 icon=ft.Icons.UPLOAD_FILE,
-                on_click=file_picker.pick_files
+                on_click=pick_files
             )
         ])
         self.dialogUpload.open = True
