@@ -17,7 +17,7 @@ class UIManager():
     
     def run(self):
         logging.info(f"{__name__} run iniciado!")
-        ft.run(self.gui)
+        ft.run(self.gui, upload_dir=".")
 
     def gui(self, page: ft.Page):
         logging.info(f"{__name__} gui iniciado!")
@@ -26,33 +26,7 @@ class UIManager():
         self.page.padding = 0
         self.page.margin = 0
         self.layout = Layout(page=page,app=self.app, uiManager=self)
-
-"""
-        data = self.app.appData.getData()
-        networkData = data.network
-
-        text_ip_local = ft.Text(f"IP Local: {networkData.value.get('ipLocal', '...')}", size=16)
-        text_ip_external = ft.Text(f"IP Externo: {networkData.value.get('ipExternal', '...')}", size=16)
+        #file_picker = ft.FilePicker(on_upload=lambda e: print(e.files))
+        #page.overlay.append(file_picker)
+        #page.file_picker = file_picker
         
-        networkData.subscribe(
-            on_next=lambda val: (
-                setattr(text_ip_local, "value", val.get("ipLocal")),
-                setattr(text_ip_external, "value", val.get("ipExternal")),
-                self.page.update()
-            )
-        )
-
-        self.page.add(
-            ft.Card(
-                content=ft.Container(
-                    content=ft.Column([
-                        ft.Text("Informações de Rede", weight="bold", size=20),
-                        text_ip_local,
-                        text_ip_external,
-                    ]),
-                    padding=20
-                )
-            )
-        )
-
-"""

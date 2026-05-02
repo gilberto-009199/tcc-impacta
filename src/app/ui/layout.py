@@ -77,6 +77,7 @@ class Layout:
         )
         
         page.add(self.mainLayout)
+        
 
     def navigateTo(self, route):
         if route in self.routes:
