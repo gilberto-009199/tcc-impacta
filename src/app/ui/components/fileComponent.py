@@ -6,20 +6,25 @@ import threading
 import time
 
 class FileComponent(ft.Container):
-    def __init__(self, app, uiManager, nome_arquivo="curumada.mp4", 
-                 bytes_download=52428800,  # 50 MB
-                 bytes_upload=10485760,   # 10 MB
-                 total_pares=5):
+    def __init__(self,
+                app,
+                uiManager,
+                fileInfo):
         
         logging.info(f"{__name__} iniciou!")
         
         self.app = app
         self.uiManager = uiManager
-        self.nome_arquivo = nome_arquivo
-        self.bytes_download = bytes_download
-        self.bytes_upload = bytes_upload
-        self.bytes_total = bytes_download + bytes_upload
-        self.total_pares = total_pares
+
+        self.fileInfo = fileInfo
+        self.name = self.fileInfo.get('name')
+        self.bytes_total = self.fileInfo.get('size')
+
+        self.bytes_download = self.fileInfo.get('bytes_download')
+        self.bytes_upload = self.fileInfo.get('bytes_upload')
+
+        self.total_pares = self.bytes_upload = self.fileInfo.get('total_pares')
+        
         self.progresso = 0.0
         self.velocidade = 0
         
@@ -54,7 +59,7 @@ class FileComponent(ft.Container):
                     # Cabeçalho
                     ft.Row([
                         ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.BLUE, size=24),
-                        ft.Text(self.nome_arquivo, size=16, weight=ft.FontWeight.BOLD, expand=True),
+                        ft.Text(self.name, size=16, weight=ft.FontWeight.BOLD, expand=True),
                         ft.IconButton(
                             icon=ft.Icons.PAUSE_CIRCLE,
                             icon_color=ft.Colors.ORANGE,
@@ -136,7 +141,7 @@ class FileComponent(ft.Container):
         )
     
     def toggle_pause(self, e):
-        print(f"Pausar/Resumir: {self.nome_arquivo}")
+        print(f"Pausar/Resumir: {self.name}")
     
     def cancelar(self, e):
-        print(f"Cancelar: {self.nome_arquivo}")
+        print(f"Cancelar: {self.name}")

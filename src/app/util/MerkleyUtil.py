@@ -1,11 +1,6 @@
-"""
-Utilitário de Árvore de Merkle para arquivos
-- Divide arquivo em blocos de 1MB (completa com zeros se necessário)
-- Calcula SHA-1 de cada bloco
-- Calcula SHA-1 do arquivo completo
-- Constrói árvore de Merkle
-- Verifica integridade do arquivo todo ou de blocos específicos
-"""
+import logging
+
+logger = logging.getLogger(__name__)
 
 import hashlib
 import os
@@ -60,9 +55,9 @@ class MerkleUtil:
         # Calcula quantos blocos serão necessários
         self.total_blocks = (self.file_size + self.block_size - 1) // self.block_size
         
-        print(f"\n📁 Arquivo: {self.file_name}")
-        print(f"   Tamanho: {self.file_size:,} bytes")
-        print(f"   Blocos: {self.total_blocks} blocos de {self.block_size:,} bytes")
+        logger.info(f"\n📁 Arquivo: {self.file_name}")
+        logger.info(f"   Tamanho: {self.file_size:,} bytes")
+        logger.info(f"   Blocos: {self.total_blocks} blocos de {self.block_size:,} bytes")
         
         self.blocks = []
         self.block_hashes = []
@@ -78,7 +73,6 @@ class MerkleUtil:
                 # Se for o último bloco e for menor que block_size, completa com zeros
                 if len(chunk) < self.block_size:
                     chunk = chunk + b'\x00' * (self.block_size - len(chunk))
-                    print(f"   ⚠️  Último bloco completado com zeros (+{self.block_size - len(chunk)} bytes)")
                 
                 self.blocks.append(chunk)
                 block_index += 1
@@ -90,7 +84,9 @@ class MerkleUtil:
         with open(file_path, 'rb') as f:
             self.file_hash = hashlib.sha1(f.read()).hexdigest()
         
-        print(f"   🔑 SHA-1 do arquivo completo: {self.file_hash[:20]}...")
+        logger.info(f"   🔑 SHA-1 do arquivo completo: {self.file_hash}...")
+        
+        return self.file_hash[:20]
     
     def _sha1(self, data: bytes) -> str:
         """Calcula SHA-1 de dados binários"""
@@ -111,20 +107,20 @@ class MerkleUtil:
         if not self.blocks:
             raise ValueError("Nenhum arquivo carregado. Use load_file() primeiro.")
         
-        print(f"\n🌳 Construindo árvore de Merkle...")
+        logger.info(f"\n🌳 Construindo árvore de Merkle...")
         
         # Calcula SHA-1 de cada bloco
         self.block_hashes = []
         for i, block in enumerate(self.blocks):
             block_hash = self._sha1(block)
             self.block_hashes.append(block_hash)
-            print(f"   Bloco {i:3d}: {block_hash[:16]}...")
+            logger.info(f"   Bloco {i:3d}: {block_hash}")
         
         # Constrói árvore recursivamente
         self.merkle_root = self._build_tree_recursive(self.block_hashes)
         
-        print(f"\n   🌿 Raiz de Merkle: {self.merkle_root}")
-        print(f"   🎯 Valor inteiro (Kademlia): {int(self.merkle_root, 16)}")
+        logger.info(f"\n   🌿 Raiz de Merkle: {self.merkle_root}")
+        logger.info(f"   🎯 Valor inteiro (Kademlia): {int(self.merkle_root, 16)}")
         
         return self.merkle_root
     
@@ -269,22 +265,22 @@ class MerkleUtil:
         
         is_valid = (computed_root == self.merkle_root and computed_hash == self.file_hash)
         
-        print(f"\n{'='*50}")
-        print(f"VERIFICANDO INTEGRIDADE: {self.file_name}")
-        print(f"{'='*50}")
-        print(f"Hash do arquivo:")
-        print(f"  Esperado: {self.file_hash}")
-        print(f"  Calculado: {computed_hash}")
-        print(f"  ✅ Hash confere" if computed_hash == self.file_hash else "  ❌ Hash DIFERENTE")
-        print(f"\nRaiz de Merkle:")
-        print(f"  Esperado: {self.merkle_root}")
-        print(f"  Calculado: {computed_root}")
-        print(f"  ✅ Raiz confere" if computed_root == self.merkle_root else "  ❌ Raiz DIFERENTE")
+        logger.info(f"\n{'='*50}")
+        logger.info(f"VERIFICANDO INTEGRIDADE: {self.file_name}")
+        logger.info(f"{'='*50}")
+        logger.info(f"Hash do arquivo:")
+        logger.info(f"  Esperado: {self.file_hash}")
+        logger.info(f"  Calculado: {computed_hash}")
+        logger.info(f"  ✅ Hash confere" if computed_hash == self.file_hash else "  ❌ Hash DIFERENTE")
+        logger.info(f"\nRaiz de Merkle:")
+        logger.info(f"  Esperado: {self.merkle_root}")
+        logger.info(f"  Calculado: {computed_root}")
+        logger.info(f"  ✅ Raiz confere" if computed_root == self.merkle_root else "  ❌ Raiz DIFERENTE")
         
         if is_valid:
-            print(f"\n✅ ARQUIVO ÍNTEGRO!")
+            logger.info(f"\n✅ ARQUIVO ÍNTEGRO!")
         else:
-            print(f"\n❌ ARQUIVO CORROMPIDO!")
+            logger.info(f"\n❌ ARQUIVO CORROMPIDO!")
         
         return is_valid
     
@@ -307,38 +303,42 @@ class MerkleUtil:
         for i, (idx, data, proof) in enumerate(zip(block_indices, block_data_list, proofs)):
             if not self.verify_block(idx, data, proof):
                 invalid_blocks.append(idx)
-                print(f"❌ Bloco {idx}: INVÁLIDO")
+                logger.info(f"❌ Bloco {idx}: INVÁLIDO")
             else:
-                print(f"✅ Bloco {idx}: válido")
+                logger.info(f"✅ Bloco {idx}: válido")
         
         return invalid_blocks
     
     def get_info(self) -> dict:
         """Retorna informações do arquivo e árvore"""
         return {
-            "file_name": self.file_name,
-            "file_size": self.file_size,
-            "file_hash": self.file_hash,
+            "name": self.file_name,
+            "path": self.file_path,
+            "size": self.file_size,
+            "hash": self.file_hash,
             "block_size": self.block_size,
             "total_blocks": self.total_blocks,
             "merkle_root": self.merkle_root,
-            "block_hashes": self.block_hashes
+            "block_hashes": self.block_hashes,
+            "bytes_download": 0,
+            "bytes_upload": 0,
+            "total_pares": 0
         }
     
     def print_tree(self):
         """Exibe a árvore de Merkle de forma hierárquica"""
         if not self.block_hashes:
-            print("Árvore não construída")
+            logger.info("Árvore não construída")
             return
         
-        print(f"\n{'='*50}")
-        print(f"ÁRVORE DE MERKLE - {self.file_name}")
-        print(f"{'='*50}")
+        logger.info(f"\n{'='*50}")
+        logger.info(f"ÁRVORE DE MERKLE - {self.file_name}")
+        logger.info(f"{'='*50}")
         
         # Nível das folhas (blocos)
-        print(f"\n📄 FOLHAS (SHA-1 de cada bloco):")
+        logger.info(f"\n📄 FOLHAS (SHA-1 de cada bloco):")
         for i, h in enumerate(self.block_hashes):
-            print(f"   Bloco {i:3d}: {h}")
+            logger.info(f"   Bloco {i:3d}: {h}")
         
         # Reconstrói níveis para exibição
         levels = [self.block_hashes]
@@ -356,13 +356,13 @@ class MerkleUtil:
         
         # Exibe níveis internos
         for level_idx, level in enumerate(levels[1:-1], 1):
-            print(f"\n🌿 NÍVEL {level_idx}:")
+            logger.info(f"\n🌿 NÍVEL {level_idx}:")
             for i, h in enumerate(level):
-                print(f"   Nó {i:3d}: {h}")
+                logger.info(f"   Nó {i:3d}: {h}")
         
         # Raiz
-        print(f"\n🌟 RAIZ DE MERKLE:")
-        print(f"   {levels[-1][0]}")
+        logger.info(f"\n🌟 RAIZ DE MERKLE:")
+        logger.info(f"   {levels[-1][0]}")
 
 
 # ============ FUNÇÕES DE USO RÁPIDO ============
@@ -398,7 +398,7 @@ def verificar_arquivo(arquivo: str, merkle_root_esperada: str = None) -> bool:
     
     if merkle_root_esperada:
         if util.merkle_root != merkle_root_esperada:
-            print(f"❌ Raiz de Merkle não confere!")
+            logger.info(f"❌ Raiz de Merkle não confere!")
             return False
     
     return util.verify_file()
@@ -409,9 +409,9 @@ def verificar_arquivo(arquivo: str, merkle_root_esperada: str = None) -> bool:
 if __name__ == "__main__":
     
     # Criando arquivo de exemplo
-    print("\n" + "="*60)
-    print("CRIANDO ARQUIVO DE EXEMPLO")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("CRIANDO ARQUIVO DE EXEMPLO")
+    logger.info("="*60)
     
     # Arquivo de 2.5 MB (3 blocos: 1MB + 1MB + 0.5MB completado com zeros)
     with open("exemplo.bin", "wb") as f:
@@ -420,37 +420,37 @@ if __name__ == "__main__":
         f.write(b"C" * 512 * 1024)   # Bloco 3: 0.5MB de 'C' (será completado)
     
     # ============ EXEMPLO 1: Criar árvore ============
-    print("\n" + "="*60)
-    print("EXEMPLO 1: CRIANDO ÁRVORE DE MERKLE")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("EXEMPLO 1: CRIANDO ÁRVORE DE MERKLE")
+    logger.info("="*60)
     
     merkle = MerkleUtil("exemplo.bin")
     root = merkle.build_tree()
     
     # Exibe informações
     info = merkle.get_info()
-    print(f"\n📊 INFORMAÇÕES:")
-    print(f"   Arquivo: {info['file_name']}")
-    print(f"   Tamanho: {info['file_size']:,} bytes")
-    print(f"   SHA-1 do arquivo: {info['file_hash']}")
-    print(f"   Raiz de Merkle: {info['merkle_root']}")
-    print(f"   Total de blocos: {info['total_blocks']}")
+    logger.info(f"\n📊 INFORMAÇÕES:")
+    logger.info(f"   Arquivo: {info['file_name']}")
+    logger.info(f"   Tamanho: {info['file_size']:,} bytes")
+    logger.info(f"   SHA-1 do arquivo: {info['file_hash']}")
+    logger.info(f"   Raiz de Merkle: {info['merkle_root']}")
+    logger.info(f"   Total de blocos: {info['total_blocks']}")
     
     # Exibe árvore completa
     merkle.print_tree()
     
     # ============ EXEMPLO 2: Verificar arquivo todo ============
-    print("\n" + "="*60)
-    print("EXEMPLO 2: VERIFICANDO ARQUIVO COMPLETO")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("EXEMPLO 2: VERIFICANDO ARQUIVO COMPLETO")
+    logger.info("="*60)
     
     # Verifica arquivo original (deve ser válido)
     merkle.verify_file()
     
     # Simula corrupção e verifica
-    print("\n" + "-"*40)
-    print("SIMULANDO CORRUPÇÃO NO ARQUIVO")
-    print("-"*40)
+    logger.info("\n" + "-"*40)
+    logger.info("SIMULANDO CORRUPÇÃO NO ARQUIVO")
+    logger.info("-"*40)
     
     with open("exemplo_corrupto.bin", "wb") as f:
         with open("exemplo.bin", "rb") as orig:
@@ -464,31 +464,31 @@ if __name__ == "__main__":
     merkle_corrupto.verify_file()
     
     # ============ EXEMPLO 3: Verificar bloco específico ============
-    print("\n" + "="*60)
-    print("EXEMPLO 3: VERIFICANDO BLOCO ESPECÍFICO")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("EXEMPLO 3: VERIFICANDO BLOCO ESPECÍFICO")
+    logger.info("="*60)
     
     # Obtém prova para o bloco 1
     proof_block1 = merkle.get_proof(1)
-    print(f"\nProva para o Bloco 1:")
+    logger.info(f"\nProva para o Bloco 1:")
     for i, (h, pos) in enumerate(proof_block1):
-        print(f"   Nível {i}: {pos} - {h[:20]}...")
+        logger.info(f"   Nível {i}: {pos} - {h[:20]}...")
     
     # Verifica bloco 1
     block1_data = merkle.blocks[1]
     is_valid = merkle.verify_block(1, block1_data, proof_block1)
-    print(f"\nVerificando Bloco 1: {'✅ Válido' if is_valid else '❌ Inválido'}")
+    logger.info(f"\nVerificando Bloco 1: {'✅ Válido' if is_valid else '❌ Inválido'}")
     
     # Simula corrupção no bloco
-    print(f"\nSimulando corrupção no Bloco 1:")
+    logger.info(f"\nSimulando corrupção no Bloco 1:")
     corrupted_block = block1_data[:100] + b'X' + block1_data[101:]
     is_valid = merkle.verify_block(1, corrupted_block, proof_block1)
-    print(f"Bloco 1 corrompido: {'✅ Válido' if is_valid else '❌ Inválido'}")
+    logger.info(f"Bloco 1 corrompido: {'✅ Válido' if is_valid else '❌ Inválido'}")
     
     # ============ EXEMPLO 4: Arquivo menor que 1MB ============
-    print("\n" + "="*60)
-    print("EXEMPLO 4: ARQUIVO MENOR QUE 1MB")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("EXEMPLO 4: ARQUIVO MENOR QUE 1MB")
+    logger.info("="*60)
     
     # Arquivo pequeno (500KB)
     with open("pequeno.txt", "wb") as f:
@@ -497,25 +497,25 @@ if __name__ == "__main__":
     merkle_pequeno = MerkleUtil("pequeno.txt")
     root_pequeno = merkle_pequeno.build_tree()
     
-    print(f"\nArquivo pequeno: {merkle_pequeno.file_size:,} bytes")
-    print(f"Total de blocos: {merkle_pequeno.total_blocks}")
-    print(f"Bloco único completado com zeros até 1MB")
-    print(f"Raiz de Merkle: {root_pequeno}")
+    logger.info(f"\nArquivo pequeno: {merkle_pequeno.file_size:,} bytes")
+    logger.info(f"Total de blocos: {merkle_pequeno.total_blocks}")
+    logger.info(f"Bloco único completado com zeros até 1MB")
+    logger.info(f"Raiz de Merkle: {root_pequeno}")
     
     # ============ EXEMPLO 5: Funções rápidas ============
-    print("\n" + "="*60)
-    print("EXEMPLO 5: FUNÇÕES RÁPIDAS")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("EXEMPLO 5: FUNÇÕES RÁPIDAS")
+    logger.info("="*60)
     
     # Criar árvore com uma linha
     util = criar_arvore_merkle("exemplo.bin")
-    print(f"\n✅ Árvore criada! Raiz: {util.merkle_root[:20]}...")
+    logger.info(f"\n✅ Árvore criada! Raiz: {util.merkle_root[:20]}...")
     
     # Verificar arquivo
     eh_valido = verificar_arquivo("exemplo.bin")
     
-    print("\n" + "="*60)
-    print("✅ UTILITÁRIO PRONTO PARA USO!")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("✅ UTILITÁRIO PRONTO PARA USO!")
+    logger.info("="*60)
 
 """

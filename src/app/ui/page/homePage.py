@@ -16,7 +16,8 @@ class HomePage(ft.Container):
         appData = self.app.appData
         data = appData.getData()
         user = data.user.value
-
+        
+        self.listFiles = ft.Row([self.renderlistFiles()])
         toggleOnline = ft.Switch(value=user.get('online'), label="Online", on_change=lambda val: appData.setData(data.user,{ "online": val.data }))
 
         self.dialogUpload = ft.AlertDialog(
@@ -114,20 +115,28 @@ class HomePage(ft.Container):
                     spacing=32
                 ),
                 ft.Divider(),
-                self.listFiles()
+                self.listFiles
             ]),
             expand=True
         )
     
+        def reactFiles(files):
+            lista = self.renderlistFiles(files=files)
+            self.listFiles.controls = lista
+            page.update()
+        data.files.subscribe(on_next=reactFiles)
+        
 
     async def showUploadDialog(self):
         
         async def pick_files(e):
             file_picker = ft.FilePicker()
-            files_list = await file_picker.pick_files(allow_multiple=True)
+            files_list = await file_picker.pick_files(allow_multiple=False)
             print("list =", files_list)
-            if files_list:
-                print(", ".join([f.name for f in files_list]))
+            if files_list[0]:
+                file = files_list[0]
+                fileInfo = self.app.fileManager.addFile(name=file.name, path=file.path)
+
             else:
                 print("Cancelled!")
         
@@ -161,7 +170,9 @@ class HomePage(ft.Container):
         dialog.open = False
         self.page.update()
 
-    def listFiles(self):
-        return ft.Row([
-            FileComponent(self.app, self.uiManager)
-        ])
+    def renderlistFiles(self, files=[]):
+        
+        print(f"\n\n DADOS DE FILES: {files} \n\n")
+
+        return [FileComponent(self.app, self.uiManager, fileInfo=file) for file in files];
+        

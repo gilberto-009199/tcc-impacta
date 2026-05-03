@@ -89,3 +89,7 @@ class PeerManager():
             client.stop()
 
         self.clients = []
+
+    def addDownloadFile(self, peer, file):
+        logging.info(f"{__name__} addDownloadFile iniciado!")
+        pass

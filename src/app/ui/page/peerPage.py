@@ -2,6 +2,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from pathlib import Path
+import os
+
 import flet as ft
 import flet_map as fm
 import random
@@ -65,6 +68,20 @@ class PeerPage(ft.Container):
             open=False
         )
 
+        self.dialogPeerFilesDownload = ft.AlertDialog(
+            title=ft.Text(f"Downlaod Arquivo do Peer: ", size=18, weight=ft.FontWeight.BOLD),
+            content=[],
+            actions=[
+                ft.TextButton(
+                    "Fechar",
+                    icon=ft.Icons.CLOSE,
+                    on_click=lambda e: self.close_dialog(self.dialogPeerFilesDownload)
+                ),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+            open=False
+        )
+
         self.dialogPeerClose = ft.AlertDialog(
             title=ft.Text(f"Desconectar do Peer: ", size=18, weight=ft.FontWeight.BOLD),
             content=[],
@@ -119,6 +136,7 @@ class PeerPage(ft.Container):
                 ft.Column([
                         self.dialogPeerConnect,
                         self.dialogPeerFiles,
+                        self.dialogPeerFilesDownload,
                         self.dialogPeerClose,
                         ft.Row([
                                 ft.Divider(),
@@ -248,16 +266,111 @@ class PeerPage(ft.Container):
                 # list files
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.FILE_COPY, color=ft.Colors.GREEN),
-                    title=ft.Text("Arquivos", weight=ft.FontWeight.BOLD),
-                    subtitle=ft.Text(", ".join(peer_files) if peer_files else "Nenhum arquivo disponível")
+                    title=ft.Text("Arquivos:", weight=ft.FontWeight.BOLD),
+                    subtitle=ft.Text(f"{len(peer_files)} files disponiveis") if len(peer_files) > 0 else ft.Text("Nenhum arquivo disponível")
+                ),
+                ft.ListView(
+                    controls=[
+                        ft.FilledButton(
+                            content=ft.Text(f"{file.get('name')[:50]}"),
+                            icon=ft.Icons.FILE_DOWNLOAD,
+                            on_click=lambda _: self.showDialogPeerFilesDownload(peer, file)
+                        ) 
+                        for file in peer_files
+                    ]
                 )
-
             ], spacing=5),
             width=400,
             padding=10
         )
         
         self.dialogPeerFiles.open = True
+        self.page.update()
+
+    def showDialogPeerFilesDownload(self, peer, file):
+        """Mostra informações detalhadas do peer"""
+
+        peer_ip = peer.get("ip", peer.get("host", "Unknown"))
+        peer_port = peer.get("port", "Unknown")
+        peer_name = peer.get("name", peer_ip + ":" + str(peer_port))
+        peer_files = peer.get("files", [])
+        
+        appData = self.app.appData
+        data = appData.getData()
+        user = data.user.value
+        unix_time = str(int(time.time()))
+        path =  os.path.join(str(user.get('download')), unix_time, file.get('name'))
+
+        def startDownlaodFile(peer, file):
+            self.app.peerManager.addDownloadFile(peer, file)
+
+        def changeDownloadDir(file):
+            pass
+        
+        def _format_bytes(bytes):
+            for unidade in ['B', 'KB', 'MB', 'GB']:
+                if bytes < 1024.0:
+                    return f"{bytes:.1f} {unidade}"
+                bytes /= 1024.0
+            return f"{bytes:.1f} TB"
+        
+        # Cria dialog com informações
+        self.dialogPeerFilesDownload.content = ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.COMPUTER, size=40, color=ft.Colors.BLUE_400),
+                    ft.Text(peer_name, size=16, weight=ft.FontWeight.BOLD)
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                
+                ft.Divider(),
+                
+                
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.FILE_COPY, color=ft.Colors.GREEN),
+                    title=ft.Text(f"Arquivo: {file.get('name')[:70]}", weight=ft.FontWeight.BOLD),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.FILE_DOWNLOAD, color=ft.Colors.GREEN),
+                    title=ft.Text(f"Size: {_format_bytes(file.get('size'))}", weight=ft.FontWeight.BOLD),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.HANDSHAKE, color=ft.Colors.GREEN),
+                    title=ft.Text(f"Blocks: {file.get('total_blocks')}", weight=ft.FontWeight.BOLD),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.HANDSHAKE, color=ft.Colors.GREEN),
+                    title=ft.Text(f"Merkle: {file.get('merkle_root')}", weight=ft.FontWeight.BOLD),
+                ),
+                
+                ft.Divider(),
+
+                ft.Row([
+                    ft.Text(
+                        f"{path[:50]}",
+                        size=10,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                        no_wrap=True
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.FOLDER_COPY,
+                        on_click=lambda _: changeDownloadDir(file)
+                    )
+                ], alignment=ft.MainAxisAlignment.CENTER),
+                
+                ft.Divider(),
+                
+                ft.Row([
+                    ft.FilledButton(
+                        content=ft.Text("Iniciar Download"),
+                        on_click=lambda _: startDownlaodFile(peer, file)
+                    )
+                ], alignment=ft.MainAxisAlignment.CENTER)
+            ], spacing=5, alignment=ft.MainAxisAlignment.CENTER ),
+            width=400,
+            padding=10
+        )
+        
+        self.dialogPeerFilesDownload.open = True
         self.page.update()
 
     def showDialogPeerClose(self, peer):
@@ -315,8 +428,6 @@ class PeerPage(ft.Container):
         
         self.dialogPeerClose.open = True
         self.page.update()
-
-
 
     def connect_to_peer(self, ip, port, loading, button, dialog):
         """Tenta conectar ao peer"""

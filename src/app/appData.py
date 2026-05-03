@@ -2,6 +2,8 @@ import base64
 import logging
 import random
 import secrets
+import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,8 @@ class AppData():
             "service": False,
             "upnp": False,
             "identifier": base64.b64encode(secrets.token_bytes(160)).decode('utf-8'),
-            "feature": [0, 0, 0]
+            "feature": [0, 0, 0],
+            "download": os.path.join(str(Path.home()), "Downloads")
         })
         self.network = BehaviorSubject({
             "ipLocal": False,

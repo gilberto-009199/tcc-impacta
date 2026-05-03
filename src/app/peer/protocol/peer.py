@@ -98,6 +98,7 @@ class Peer:
                 
 
                 self.socket.send(packet)
+                self.timeKeepAlive = time.time()
 
             except BlockingIOError:
                 pass
