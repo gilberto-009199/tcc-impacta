@@ -25,14 +25,19 @@ class FileComponent(ft.Container):
 
         self.total_pares = self.bytes_upload = self.fileInfo.get('total_pares')
         
-        self.progresso = 0.0
+        countBlocks = len(self.fileInfo.get('block_hashes', []));
+        blocksDownload = self.fileInfo.get('block_download',[]).count(1);
+        
+        print(f"+ {min(blocksDownload / countBlocks, countBlocks)} + ")
+
+        self.progresso = min(blocksDownload / countBlocks, countBlocks) 
         self.velocidade = 0
         
         self.format_bytes = self._format_bytes
         
         # Criar controles que serão atualizados
-        self.progress_bar = ft.ProgressBar(value=0, height=10, border_radius=5, color=ft.Colors.BLUE)
-        self.progress_text = ft.Text("0%", size=12, weight=ft.FontWeight.BOLD)
+        self.progress_bar = ft.ProgressBar(value=self.progresso, height=10, border_radius=5, color=ft.Colors.BLUE)
+        self.progress_text = ft.Text(f"{self.progresso * 100}%", size=12, weight=ft.FontWeight.BOLD)
         self.download_text = ft.Text(self.format_bytes(0), size=14, weight=ft.FontWeight.BOLD)
         self.upload_text = ft.Text(self.format_bytes(0), size=14, weight=ft.FontWeight.BOLD)
         self.bytes_transferidos_text = ft.Text("0 B", size=11, weight=ft.FontWeight.BOLD)
@@ -61,7 +66,7 @@ class FileComponent(ft.Container):
                         ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.BLUE, size=24),
                         ft.Text(self.name, size=16, weight=ft.FontWeight.BOLD, expand=True),
                         ft.IconButton(
-                            icon=ft.Icons.PAUSE_CIRCLE,
+                            icon=ft.Icons.PLAY_CIRCLE, # PAUSE_CIRCLE
                             icon_color=ft.Colors.ORANGE,
                             on_click=self.toggle_pause
                         ),
@@ -117,10 +122,6 @@ class FileComponent(ft.Container):
                     ft.Column([
                         ft.Row([
                             ft.Text("Progresso", size=11, color=ft.Colors.GREY_600),
-                            ft.Row([
-                                self.bytes_transferidos_text,
-                                ft.Text(f"/ {self.format_bytes(self.bytes_total)}", size=11),
-                            ], spacing=2),
                             self.progress_text,
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                         self.progress_bar,

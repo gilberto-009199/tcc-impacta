@@ -17,7 +17,7 @@ class HomePage(ft.Container):
         data = appData.getData()
         user = data.user.value
         
-        self.listFiles = ft.Row([self.renderlistFiles()])
+        self.listFiles = ft.Column([self.renderlistFiles()], alignment=ft.Alignment.CENTER )
         toggleOnline = ft.Switch(value=user.get('online'), label="Online", on_change=lambda val: appData.setData(data.user,{ "online": val.data }))
 
         self.dialogUpload = ft.AlertDialog(
@@ -116,7 +116,7 @@ class HomePage(ft.Container):
                 ),
                 ft.Divider(),
                 self.listFiles
-            ]),
+            ],horizontal_alignment=ft.CrossAxisAlignment.CENTER),
             expand=True
         )
     
@@ -132,7 +132,7 @@ class HomePage(ft.Container):
         async def pick_files(e):
             file_picker = ft.FilePicker()
             files_list = await file_picker.pick_files(allow_multiple=False)
-            print("list =", files_list)
+
             if files_list[0]:
                 file = files_list[0]
                 fileInfo = self.app.fileManager.addFile(name=file.name, path=file.path)
@@ -141,7 +141,6 @@ class HomePage(ft.Container):
                 print("Cancelled!")
         
         self.dialogUpload.content = ft.Column([
-            ft.Text("Em breve!"),
             ft.Button(
                 "Selecionar Arquivo",
                 icon=ft.Icons.UPLOAD_FILE,
@@ -174,5 +173,5 @@ class HomePage(ft.Container):
         
         print(f"\n\n DADOS DE FILES: {files} \n\n")
 
-        return [FileComponent(self.app, self.uiManager, fileInfo=file) for file in files];
+        return [FileComponent(self.app, self.uiManager, fileInfo=file) for file in files] if len(files) > 0 else ft.Text("Nenhum arquivo presente",text_align= ft.TextAlign.CENTER, size=14, color=ft.Colors.GREY_600);
         

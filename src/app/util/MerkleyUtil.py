@@ -320,6 +320,7 @@ class MerkleUtil:
             "total_blocks": self.total_blocks,
             "merkle_root": self.merkle_root,
             "block_hashes": self.block_hashes,
+            "block_download": [1] * len(self.block_hashes),
             "bytes_download": 0,
             "bytes_upload": 0,
             "total_pares": 0

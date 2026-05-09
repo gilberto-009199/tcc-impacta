@@ -12,17 +12,32 @@ class FileHandle:
     def __init__(self, fileInfo = None):
         self.fileInfo = fileInfo
         self.path = fileInfo.get('path')
+        self.size = fileInfo.get('size')
         self.file: Optional[BinaryIO] = None
         self.mmap: Optional[mmap.mmap] = None
-        self.size = 0
         self._open()
     
     def _open(self):
         """Abre o arquivo e cria mapeamento de memória"""
         self.file = open(self.path, 'rb')
-        self.size = os.path.getsize(self.path)
+        
+        # Obtém o tamanho real do arquivo
         try:
-            # Tenta usar mmap para acesso eficiente
+            real_size = os.path.getsize(self.path)
+            self.size = real_size
+        except OSError as e:
+            logger.error(f"Erro ao obter tamanho do arquivo {self.path}: {e}")
+            self.size = 0
+        
+        # Verifica se o arquivo tem 0 bytes
+        if self.size == 0:
+            logger.info(f"Arquivo {self.path} tem 0 bytes (arquivo vazio/criado recentemente)")
+            # Não tenta criar mmap para arquivo vazio
+            self.mmap = None
+            return
+        
+        try:
+            # Tenta usar mmap para acesso eficiente (apenas para arquivos > 0 bytes)
             self.mmap = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
         except Exception as e:
             logger.warning(f"Falha ao criar mmap para {self.path}: {e}")
@@ -39,6 +54,11 @@ class FileHandle:
         Returns:
             bytes do bloco ou None se índice inválido
         """
+        # Se o arquivo tem 0 bytes, retorna None ou bytes vazio baseado na necessidade
+        if self.size == 0:
+            logger.debug(f"Arquivo vazio (0 bytes), não é possível ler bloco {block_index}")
+            return None
+        
         offset = block_index * block_size
         
         if offset >= self.size:
@@ -57,6 +77,8 @@ class FileHandle:
     
     def get_block_count(self, block_size: int = 1024 * 1024) -> int:
         """Retorna o número total de blocos de 1MB no arquivo"""
+        if self.size == 0:
+            return 0
         return (self.size + block_size - 1) // block_size
     
     def get_block_range(self, start_block: int, end_block: int, block_size: int = 1024 * 1024) -> Optional[bytes]:
@@ -71,6 +93,10 @@ class FileHandle:
         Returns:
             bytes concatenados dos blocos
         """
+        if self.size == 0:
+            logger.debug("Arquivo vazio (0 bytes), retornando bytes vazio")
+            return b''  # Retorna bytes vazio para arquivo vazio
+        
         if start_block >= end_block:
             return None
         
@@ -82,6 +108,14 @@ class FileHandle:
             result.extend(block_data)
         
         return bytes(result)
+    
+    def is_empty(self) -> bool:
+        """Verifica se o arquivo está vazio (0 bytes)"""
+        return self.size == 0
+    
+    def get_size_mb(self) -> float:
+        """Retorna o tamanho do arquivo em MB"""
+        return self.size / (1024 * 1024)
     
     def close(self):
         """Fecha a conexão com o arquivo"""

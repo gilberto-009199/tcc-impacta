@@ -302,7 +302,7 @@ class PeerPage(ft.Container):
         path =  os.path.join(str(user.get('download')), unix_time, file.get('name'))
 
         def startDownlaodFile(peer, file):
-            self.app.peerManager.addDownloadFile(peer, file)
+            self.app.peerManager.addDownloadFile(peer, file, path)
 
         def changeDownloadDir(file):
             pass

@@ -11,7 +11,6 @@ class PeerManager():
     def __init__(self, app):
         logging.info(f"{__name__} iniciou!")
         self.app = app
-        
         self.server = Server(peerManager=self)
         self.clients = []
 
@@ -20,10 +19,16 @@ class PeerManager():
 
     def config(self):
         logging.info(f"{__name__} config iniciado!")
+        
+        if(hasattr(self.app,'fileManager')): 
+            self.fileManager = self.app.fileManager
+
+        if(hasattr(self.app, 'uiManager')): 
+            self.uiManager = self.app.uiManager
 
         data = self.app.appData.getData()
         user = data.user.value
-
+        
         if not user.get("online"):
             self.stop()
             return;
@@ -90,6 +95,9 @@ class PeerManager():
 
         self.clients = []
 
-    def addDownloadFile(self, peer, file):
-        logging.info(f"{__name__} addDownloadFile iniciado!")
+    def addDownloadFile(self, peer, file, path):
+        logging.info(f"{__name__} addDownloadFile iniciado! peer={peer}, file={file}, path={path}")
+        # avisar o filemanager
+        self.fileManager.addFileDownload(file, path)
+        # adicionar as menssagens de request das partes
         pass
