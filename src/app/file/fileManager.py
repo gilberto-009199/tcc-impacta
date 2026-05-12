@@ -7,12 +7,28 @@ from pathlib import Path
 from app.util.MerkleyUtil import MerkleUtil
 from app.util.FileUtil import FileUtil
 from app.file.fileHandle import FileHandle
+from app.file.fileUpload import FileUpload
+from app.file.fileDownload import FileDownload
 
 class FileManager():
     def __init__(self, app):
         logging.info(f"{__name__} iniciou!")
         self.app = app
         self.handles = {}
+        self.uploads = {}
+        self.downloads = {}
+
+    def getDownload(self, fileInfo):
+        return self.downloads[fileInfo.get('merkle_root')]
+    
+    def setDownload(self, fileInfo):
+        self.downloads[fileInfo.get('merkle_root')]
+    
+    def getUpload(self, fileInfo):
+        return self.uploads[fileInfo.get('merkle_root')]
+    
+    def setUpload(self, fileInfo):
+        self.uploads[fileInfo.get('merkle_root')]
 
     def config(self):
         logging.info(f"{__name__} config iniciado!")
@@ -45,7 +61,9 @@ class FileManager():
         logger.info(f"file: {fileInfo}")
         
         self.handles[fileInfo.get('merkle_root')] = FileHandle(fileInfo=fileInfo)
-        
+        self.uploads[fileInfo.get('merkle_root')] = FileUpload(fileInfo=fileInfo)
+        self.downloads[fileInfo.get('merkle_root')] = FileDownload(fileInfo=fileInfo)
+
         data = self.app.appData.getData()
         filesData = data.files.value
 
@@ -65,7 +83,8 @@ class FileManager():
         fileInfo["block_download"] = [0] * len(fileInfo['block_hashes'])
 
         self.handles[fileInfo.get('merkle_root')] = FileHandle(fileInfo=fileInfo)
-
+        self.uploads[fileInfo.get('merkle_root')] = FileUpload(fileInfo=fileInfo)
+        self.downloads[fileInfo.get('merkle_root')] = FileDownload(fileInfo=fileInfo)
         
         data = self.app.appData.getData()
         filesData = data.files.value

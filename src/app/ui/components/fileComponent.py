@@ -15,6 +15,7 @@ class FileComponent(ft.Container):
         
         self.app = app
         self.uiManager = uiManager
+        self.fileManager = app.fileManager
 
         self.fileInfo = fileInfo
         self.name = self.fileInfo.get('name')
@@ -48,8 +49,7 @@ class FileComponent(ft.Container):
             margin=ft.margin.all(8),
             expand=True
         )
-        
-    
+
     def _format_bytes(self, bytes):
         for unidade in ['B', 'KB', 'MB', 'GB']:
             if bytes < 1024.0:
@@ -143,6 +143,22 @@ class FileComponent(ft.Container):
     
     def toggle_pause(self, e):
         print(f"Pausar/Resumir: {self.name}")
+
+        fileDownlaod = self.fileManager.getDownload(fileInfo=self.fileInfo)
+        fileUpload = self.fileManager.getUpload(fileInfo=self.fileInfo)
+
+        isDownlaod = fileDownlaod.download
+        isUpload = fileUpload.upload
+
+        play = isDownlaod or isUpload
+
+        ft.IconButton(
+            icon=ft.Icons.PLAY_CIRCLE, # PAUSE_CIRCLE
+            icon_color=ft.Colors.ORANGE,
+            on_click=self.toggle_pause
+        )
+
+        # not play
     
     def cancelar(self, e):
         print(f"Cancelar: {self.name}")

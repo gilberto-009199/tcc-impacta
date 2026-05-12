@@ -303,6 +303,9 @@ class PeerPage(ft.Container):
 
         def startDownlaodFile(peer, file):
             self.app.peerManager.addDownloadFile(peer, file, path)
+            self.dialogPeerFilesDownload.open = False
+            self.dialogPeerFiles.open = False
+            self.page.update()
 
         def changeDownloadDir(file):
             pass
