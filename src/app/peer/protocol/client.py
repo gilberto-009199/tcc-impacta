@@ -99,6 +99,10 @@ class Client:
                 logger.info(f"[CLIENTE] Erro ao aguardar thread: {e}")
         
         logger.info(f"[CLIENTE] Stop finalizado")
+    
+    def requestPieces(self, merkle_root, index, block_size):
+        logging.debug(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
+        self.peer.requestPieces(merkle_root, index, block_size)
 
     def __del__(self):
         self.stop();

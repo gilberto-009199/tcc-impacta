@@ -101,3 +101,11 @@ class PeerManager():
         self.fileManager.addFileDownload(file, path)
         # adicionar as menssagens de request das partes
         pass
+
+    def requestPieces(self, merkle_root, index, block_size):
+        logging.debug(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
+        
+        for client in self.clients:
+                client.requestPieces(merkle_root, index, block_size);
+        
+        self.server.requestPieces(merkle_root, index, block_size)

@@ -66,7 +66,7 @@ class FileComponent(ft.Container):
                         ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.BLUE, size=24),
                         ft.Text(self.name, size=16, weight=ft.FontWeight.BOLD, expand=True),
                         ft.IconButton(
-                            icon=ft.Icons.PLAY_CIRCLE, # PAUSE_CIRCLE
+                            icon=ft.Icons.PAUSE_CIRCLE, # PAUSE_CIRCLE
                             icon_color=ft.Colors.ORANGE,
                             on_click=self.toggle_pause
                         ),
@@ -150,13 +150,19 @@ class FileComponent(ft.Container):
         isDownlaod = fileDownlaod.download
         isUpload = fileUpload.upload
 
-        play = isDownlaod or isUpload
-
-        ft.IconButton(
-            icon=ft.Icons.PLAY_CIRCLE, # PAUSE_CIRCLE
-            icon_color=ft.Colors.ORANGE,
-            on_click=self.toggle_pause
-        )
+        isPlay = isDownlaod or isUpload
+        
+        if isPlay:
+            e.control.icon = ft.Icons.PAUSE_CIRCLE
+            fileDownlaod.download = False
+            fileUpload.upload = False
+        else:
+            e.control.icon = ft.Icons.PLAY_CIRCLE
+            fileDownlaod.download = True
+            fileUpload.upload = True
+            print("Download")
+        
+        self.page.update()
 
         # not play
     

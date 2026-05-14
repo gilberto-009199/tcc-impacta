@@ -1,3 +1,6 @@
+import threading
+import time
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,6 +20,7 @@ class FileManager():
         self.handles = {}
         self.uploads = {}
         self.downloads = {}
+        self.running = False
 
     def getDownload(self, fileInfo):
         return self.downloads[fileInfo.get('merkle_root')]
@@ -33,22 +37,88 @@ class FileManager():
     def config(self):
         logging.info(f"{__name__} config iniciado!")
                 
-        if(hasattr(self.app,'fileManager')): 
-            self.fileManager = self.app.fileManager
+        if(hasattr(self.app,'peerManager')): 
+            self.peerManager = self.app.peerManager
 
         if(hasattr(self.app, 'uiManager')): 
             self.uiManager = self.app.uiManager
 
         self.merkle = MerkleUtil()
         
+        if len(self.handles) > 0:
+            self.run()
 
     def run(self):
         logging.info(f"{__name__} run iniciado!")
-        pass
+        try:
+
+            if self.running:
+                logger.info(f"[SERVIDOR] Já está rodando")
+                return
+            self.running = True
+            self.thread = threading.Thread(target=self.serve, daemon=False)
+            self.thread.start()
+
+        except Exception as e:
+            logger.warning(f"Falha no fileManager.run() {e}")
+    
+    def serve(self):
+        # queue Pieces in files to peerManager and update statics
+        # verify Pieces  and update statics
+        while self.running:
+            try:
+                
+                time.sleep(0.1) 
+                self.requestPieces()
+                self.verifyPieces()
+                time.sleep(0.1)
+                self.sendPieces()
+
+            except BlockingIOError:
+                pass
+            except Exception as e:
+                logger.info(f"78 [FileManager] Erro ao executar FileManager: {e}")
+                tb = e.__traceback__
+                
+                while tb.tb_next:
+                    tb = tb.tb_next
+                
+                linha = tb.tb_lineno
+                arquivo = tb.tb_frame.f_code.co_filename
+                logger.info(f"86 [FileManager] Erro no arquivo: {arquivo}, linha: {linha}")
+
+    def requestPieces(self):
+        logging.debug(f"{__name__} requestPieces iniciado!")
+        for merkle_root in self.downloads:
+            fileDownload = self.downloads[merkle_root]
+            if not fileDownload.download:
+                continue
+            fileInfo = fileDownload.fileInfo
+            merkle_root = fileInfo.get('merkle_root')
+            block_size = fileInfo.get('block_size')
+            total_blocks = fileInfo.get('total_blocks')
+            block_hashes = fileInfo.get('block_hashes')
+            block_download = fileInfo.get('block_download')
+
+            logging.debug(f"{__name__} requestPieces pieces to block_size={block_size}, total_blocks={total_blocks}, block_hashes={block_hashes}, block_download={block_download}")
+
+            for index, block in enumerate(block_download):
+                if block == 0:
+                    self.peerManager.requestPieces(merkle_root, index, block_size)
+
+
+    def verifyPieces(self):
+        logging.debug(f"{__name__} verifyPieces iniciado!")
+
+
+    def sendPieces(self):
+        logging.debug(f"{__name__} sendPieces iniciado!")
+
+
 
     def stop(self):
         logging.info(f"{__name__} stop iniciado!")
-        pass
+        self.running = False
     
     def addFile(self, name, path):
         logger.info("Name: "+ name)
@@ -91,7 +161,5 @@ class FileManager():
 
         filesData.append(fileInfo)
         data.files.on_next(filesData)
-        
-        # adicionar as menssagens de request das partes
 
-        pass
+        self.config()

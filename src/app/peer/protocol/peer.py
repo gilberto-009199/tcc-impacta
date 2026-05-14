@@ -240,7 +240,6 @@ class Peer:
                 logger.info(f"\t + BUFFER: {buffer.hex()}")
                 data = Msg.ofPacket(buffer);
                 logger.info(f"\t + MSG : {data}")
-
         
     def keepAlive(self):
         try:

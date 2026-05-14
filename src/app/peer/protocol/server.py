@@ -150,4 +150,6 @@ class Server:
         
         logger.info(f"[SERVIDOR] Stop finalizado")
 
-
+    def requestPieces(self, merkle_root, index, block_size):
+        logging.info(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
+# parei aqui gil
