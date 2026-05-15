@@ -7,13 +7,18 @@ from app.peer.protocol.msg.msg import Msg
 
 class MsgPieceRequest(Msg):
 
-    def __init__(self, packet = []):
+    def __init__(self, 
+                 packet = [],
+                 identifier_file = secrets.token_bytes(32),
+                 identifier_piece = secrets.token_bytes(32),
+                 identifier_index = secrets.token_bytes(2),
+                 buffer_length = secrets.token_bytes(3)):
         self.packet = []
 
-        self.identifier_file = secrets.token_bytes(32);
-        self.identifier_piece = secrets.token_bytes(32);
-        self.identifier_index = secrets.token_bytes(2);
-        self.buffer_length = secrets.token_bytes(2);
+        self.identifier_file = identifier_file
+        self.identifier_piece = identifier_piece
+        self.identifier_index = identifier_index
+        self.buffer_length = buffer_length
         
         if len(packet) != 0:
             self.parsePacket(packet)
@@ -65,3 +70,15 @@ class MsgPieceRequest(Msg):
                     f")")
         except Exception as e:
             return f"{self.__class__.__name__}(parse_error: {e})"
+        
+    
+        
+    def __eq__(self, other):
+        """Compara se dois objetos são iguais."""
+        if not isinstance(other, self.__class__):
+            return False
+        
+        return (self.identifier_file == other.identifier_file and 
+                self.identifier_piece == other.identifier_piece and 
+                self.identifier_index == other.identifier_index and
+                self.buffer_length == other.buffer_length)

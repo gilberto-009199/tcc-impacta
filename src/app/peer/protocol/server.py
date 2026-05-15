@@ -6,6 +6,7 @@ import time
 import flet as ft
 
 from app.peer.protocol.peer import Peer
+from app.peer.protocol.msg.msgPieceRequest import MsgPieceRequest
 
 import logging
 
@@ -151,5 +152,28 @@ class Server:
         logger.info(f"[SERVIDOR] Stop finalizado")
 
     def requestPieces(self, merkle_root, index, block_size):
-        logging.info(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
-# parei aqui gil
+        logging.debug(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
+        if not self.running:
+            return;
+
+        for peer in self.peers:
+            
+            if not peer.msgInfo:
+                continue;
+
+            
+            for file in peer.msgInfo.files:
+                if file.get('merkle_root') == merkle_root:
+                    # implemente isso
+                    msg = MsgPieceRequest(
+                        identifier_file = merkle_root.encode('utf-8'), # << merkle_root texto com o hash
+                        identifier_piece = index.to_bytes(32, byteorder='big'), # << index inteiro
+                        identifier_index = (0).to_bytes(2, byteorder='big'), # << 0 inteiro
+                        buffer_length = ((index*block_size) + block_size).to_bytes(2, byteorder='big') # << index * block_size inteiro 
+                    )
+                    peer.queueSend(msg)
+                
+            #peer.queueSend()
+        # find peers with merlet_root in files
+            
+        # parei aqui gil

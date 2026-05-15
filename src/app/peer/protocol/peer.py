@@ -26,7 +26,7 @@ class Peer:
         self.port = port
         self.peerManager = peerManager
         self.app = peerManager.app
-
+        self.msgInfo = False
         
         self.hasSendHandshake = False
         self.hasRecvHandshake = False
@@ -41,10 +41,13 @@ class Peer:
         self.socket = socket;
     
     def queueSend(self, msg):
-        self.queueMsgSend.append(msg);
+        if msg in self.queueMsgSend:
+            return
+        
+        self.queueMsgSend.append(msg)
 
     def queueRecv(self, msg):
-        self.queueMsgRecv.append(msg);
+        self.queueMsgRecv.append(msg)
 
     # lifecycle of peer connection
     def run(self):
@@ -172,8 +175,9 @@ class Peer:
                 logger.info(f"\t + BUFFER: {buffer.hex()}")
 
                 data = MsgInfo.ofPacket(buffer);
+                self.msgInfo = data
                 logger.info(f"\t + MSG : {data}")
-
+                
                 appData = self.app.appData.getData()
 
                 peers = appData.peers.value;

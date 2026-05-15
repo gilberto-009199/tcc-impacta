@@ -5,6 +5,7 @@ import threading
 import flet as ft
 
 from app.peer.protocol.peer import Peer
+from app.peer.protocol.msg.msgPieceRequest import MsgPieceRequest
 
 import logging
 
@@ -102,7 +103,27 @@ class Client:
     
     def requestPieces(self, merkle_root, index, block_size):
         logging.debug(f"{__name__} requestPieces iniciado! merkle_root={merkle_root}, index={index}, block_size={block_size}")
-        self.peer.requestPieces(merkle_root, index, block_size)
+
+        if not self.running:
+            return;
+    
+        if not self.peer.msgInfo:
+            return;
+    
+        self.peer.msgInfo.files
+        
+        for file in self.peer.msgInfo.files:
+            if file.get('merkle_root') == merkle_root:
+                # implemente isso
+                msg = MsgPieceRequest(
+                    identifier_file = merkle_root.encode('utf-8'), # << merkle_root texto com o hash
+                    identifier_piece = index.to_bytes(32, byteorder='big'), # << index inteiro
+                    identifier_index = (0).to_bytes(2, byteorder='big'), # << 0 inteiro
+                    buffer_length = ((index*block_size) + block_size).to_bytes(3, byteorder='big') # << index * block_size inteiro 
+                )
+                self.peer.queueSend(msg)
+        # parei aqui gil
+        
 
     def __del__(self):
         self.stop();

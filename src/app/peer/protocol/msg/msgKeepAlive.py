@@ -28,3 +28,11 @@ class MsgKeepAlive(Msg):
             return (f"{self.__class__.__name__}()")
         except Exception as e:
             return f"{self.__class__.__name__}(parse_error: {e})"
+        
+    def __eq__(self, other):
+        """Compara se dois objetos são iguais."""
+        if not isinstance(other, self.__class__):
+            return False
+        
+        return True
+    

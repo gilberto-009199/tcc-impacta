@@ -74,3 +74,13 @@ class MsgHandShake(Msg):
                     f")")
         except Exception as e:
             return f"{self.__class__.__name__}(parse_error: {e})"
+        
+    def __eq__(self, other):
+        """Compara se dois objetos são iguais."""
+        if not isinstance(other, self.__class__):
+            return False
+        
+        return (self.banner == other.banner and 
+                self.feature == other.feature and 
+                self.identifier == other.identifier)
+    
