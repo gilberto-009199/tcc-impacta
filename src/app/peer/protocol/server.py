@@ -164,16 +164,17 @@ class Server:
             
             for file in peer.msgInfo.files:
                 if file.get('merkle_root') == merkle_root:
+                    pass
                     # implemente isso
                     msg = MsgPieceRequest(
-                        identifier_file = merkle_root.encode('utf-8'), # << merkle_root texto com o hash
-                        identifier_piece = index.to_bytes(32, byteorder='big'), # << index inteiro
-                        identifier_index = (0).to_bytes(2, byteorder='big'), # << 0 inteiro
-                        buffer_length = ((index*block_size) + block_size).to_bytes(2, byteorder='big') # << index * block_size inteiro 
+                        identifier_file = merkle_root,
+                        identifier_piece = index,
+                        identifier_index = 0,
+                        buffer_length = ((index*block_size) + block_size)
                     )
                     peer.queueSend(msg)
                 
-            #peer.queueSend()
+            
         # find peers with merlet_root in files
             
         # parei aqui gil

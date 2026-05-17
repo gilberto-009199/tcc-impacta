@@ -14,11 +14,14 @@ class MsgInfoRequest(Msg):
         
         payload =  bytes(self.packet)
         
-
-        if len(payload) > 65535:
+        if len(payload) > 4294967295:  # Máximo para 4 bytes (unsigned int)
             raise ValueError(f"Payload muito grande: {len(payload)}")
         
-        header = struct.pack('!BH', Msg.MSG_TYPE_INFO_REQUEST, len(payload))
+        header = struct.pack(
+            '!BI',  # Mudado de '!BH' para '!BI' (4 bytes para o tamanho)
+            Msg.MSG_TYPE_INFO_REQUEST,
+            len(payload)
+        )
 
         packet = header + bytes(payload)
 

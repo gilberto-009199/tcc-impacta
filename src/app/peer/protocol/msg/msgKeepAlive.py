@@ -11,7 +11,7 @@ class MsgKeepAlive(Msg):
     def toPacket(self):
         
         
-        header = struct.pack('!BH', Msg.MSG_TYPE_KEEP_ALIVE, 0)
+        header = struct.pack('!BI', Msg.MSG_TYPE_KEEP_ALIVE, 0)
 
         packet = header
 

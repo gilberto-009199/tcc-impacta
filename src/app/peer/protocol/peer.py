@@ -25,6 +25,7 @@ class Peer:
         self.host = host
         self.port = port
         self.peerManager = peerManager
+        self.fileManager = peerManager.fileManager
         self.app = peerManager.app
         self.msgInfo = False
         
@@ -96,8 +97,11 @@ class Peer:
                 
                 packet = msg.toPacket()
                 logger.info(f"{self.name}[PEER] ENVIANDO MENSSAGEM DE {msg.__class__.__name__} para {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: {packet[0:2].hex()} (type: {packet[0]}, length: {packet[1]})""")
-                logger.info(f"\t + BUFFER: {packet[2:].hex()}")
+
+                type, length = struct.unpack('!BI', packet[0:5])
+                logger.info(f"\t + HEADER: {packet[0:5].hex()} (type: {type}, length: {length})""")
+                logger.info(f"\t + BUFFER: {packet[5:].hex()}")
+                logger.info(f"\t + Content: {msg}")
                 
 
                 self.socket.send(packet)
@@ -115,19 +119,19 @@ class Peer:
             if not self.validConnection():
                 return
 
-            header = self.socket.recv(3)
+            header = self.socket.recv(5)
 
-            if len(header) < 3:
+            if len(header) < 5:
                 raise Exception("Header incompleto")
 
-            msg_type, payload_len = struct.unpack('!BH', header)
+            type, length = struct.unpack('!BI', header)
 
-            logger.info(f"{self.name}[PEER] Recebido header from {self.host}:{self.port}: {header.hex()}")
-            logger.info(f"{self.name}[PEER] + type: {msg_type}")
-            logger.info(f"{self.name}[PEER] + length: {payload_len}")
+            logger.info(f"{self.name}[PEER] Recebido header from {self.host}:{self.port}:")
+            logger.info(f"\t + HEADER: (type: {type}, length: {length})""")
 
-            buffer = header + self.socket.recv(payload_len)
-            self.processMsg(msg_type, payload_len, buffer)
+            buffer = header + self.socket.recv(length) if length > 0 else header
+
+            self.processMsg(type, length, buffer)
 
         except BlockingIOError:
             pass
@@ -153,30 +157,36 @@ class Peer:
         
         logger.info(f"{self.name}[PEER] Recebeu:")
 
-
         match msg_type:
             case Msg.MSG_TYPE_KEEP_ALIVE:
                 logger.info(f"{self.name}[PEER] Recebido keep alive de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
                 data = MsgKeepAlive.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
 
             case Msg.MSG_TYPE_PIECE_REQUEST:
                 logger.info(f"{self.name}[PEER] Recebido piece request de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
                 data = MsgPieceRequest.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
+                
+                files = self.app.appData.files.value
+                for f in files:
+                    if f.get("merkle_root", None) == data.identifier_file:
+                        self.fileManager.sendMsgPiece(
+                            peer=self,
+                            merkle_root=data.identifier_file,
+                            piece=data.identifier_piece,
+                            index=data.identifier_index,
+                            buffer_length=data.buffer_length
+                        )
+                
 
             case Msg.MSG_TYPE_INFO:
                 logger.info(f"{self.name}[PEER] Recebido info de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
-
                 data = MsgInfo.ofPacket(buffer);
+                logger.info(f"\t + CONTENT : {data}")
+
                 self.msgInfo = data
-                logger.info(f"\t + MSG : {data}")
+
                 
                 appData = self.app.appData.getData()
 
@@ -192,11 +202,9 @@ class Peer:
 
             case Msg.MSG_TYPE_INFO_REQUEST:
                 logger.info(f"{self.name}[PEER] Recebido info request de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
-
                 data = MsgInfoRequest.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
+
                 appData = self.app.appData.getData()
 
                 user = appData.user.value;
@@ -216,34 +224,23 @@ class Peer:
 
             case Msg.MSG_TYPE_HAND_SHAKE:
                 logger.info(f"{self.name}[PEER] Recebido handshake de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
-
                 data = MsgHandShake.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
-
+                logger.info(f"\t + CONTENT : {data}")
+                
             case Msg.MSG_TYPE_PIECE:
                 logger.info(f"{self.name}[PEER] Recebido piece de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
-
                 data = MsgPiece.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
 
             case Msg.MSG_TYPE_PIECE_REQUEST:
                 logger.info(f"{self.name}[PEER] Recebido piece request de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
-
                 data = MsgPieceRequest.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
 
             case _:
                 logger.info(f"{self.name}[PEER] Recebido msg desconhecida de {self.host}:{self.port}")
-                logger.info(f"""\t + HEADER: type: {msg_type}, length: {payload_len})""")
-                logger.info(f"\t + BUFFER: {buffer.hex()}")
                 data = Msg.ofPacket(buffer);
-                logger.info(f"\t + MSG : {data}")
+                logger.info(f"\t + CONTENT : {data}")
         
     def keepAlive(self):
         try:
@@ -255,7 +252,7 @@ class Peer:
             packet = MsgKeepAlive().toPacket()
             self.socket.send(packet)
             
-            msg_type, payload_len = struct.unpack('!BH', packet[0:3])
+            msg_type, payload_len = struct.unpack('!BI', packet[0:5])
 
             logger.info(f"{self.name}[PEER] Enviado header do keep alive de {self.host}:{self.port}: {packet.hex()}")
             logger.info(f"{self.name}[PEER] + type: {msg_type}")
@@ -302,12 +299,12 @@ class Peer:
                 return
             
             if not self.hasRecvHandshake:
-                header = self.socket.recv(3)
+                header = self.socket.recv(5)
                 
-                if len(header) < 3:
+                if len(header) < 5:
                     return
                 
-                msg_type, payload_len = struct.unpack('!BH', header)
+                msg_type, payload_len = struct.unpack('!BI', header)
 
                 buffer = self.socket.recv(payload_len)
                 if msg_type == Msg.MSG_TYPE_HAND_SHAKE:

@@ -3,6 +3,9 @@ import time
 
 import logging
 
+from app.peer.protocol.msg.msgPiece import MsgPiece
+from app.peer.protocol.msg.msgPieceRequest import MsgPieceRequest
+
 logger = logging.getLogger(__name__)
 
 from pathlib import Path
@@ -163,3 +166,17 @@ class FileManager():
         data.files.on_next(filesData)
 
         self.config()
+
+    def sendMsgPiece(self, peer, merkle_root, piece, index, buffer_length):
+        logging.info(f"{__name__} sendMsgPiece iniciado! peer={peer}, merkle_root={merkle_root}, piece={piece}, index={index}, buffer_length={buffer_length}")
+
+        handle = self.handles[merkle_root];
+        # @todo calc buffer_length based on piece and index
+        buffer = handle.read_block(block_index=index, block_size=buffer_length)
+        msg = MsgPiece(
+            identifier_file = merkle_root,
+            identifier_piece = piece,
+            identifier_index = index,
+            buffer = buffer
+        )
+        peer.queueSend(msg)

@@ -24,7 +24,7 @@ class MsgHandShake(Msg):
 
     def parsePacket(self, packet):
         
-        packet = packet[3:]
+        packet = packet[5:]
 
         self.banner = packet[:self.MSG_HAND_SHAKE_BANNER.__len__()]
         
@@ -42,11 +42,14 @@ class MsgHandShake(Msg):
 
         payload = self.banner + bytes(payload)
         
-
-        if len(payload) > 65535:
-            raise ValueError(f"Payload muito grande: {len(payload)}")
+        if len(payload) > 4294967295:  # Máximo para 4 bytes (unsigned int)
+                raise ValueError(f"Payload muito grande: {len(payload)}")
         
-        header = struct.pack('!BH', Msg.MSG_TYPE_HAND_SHAKE, len(payload))
+        header = struct.pack(
+            '!BI',  # Mudado de '!BH' para '!BI' (4 bytes para o tamanho)
+            Msg.MSG_TYPE_HAND_SHAKE,
+            len(payload)
+        )
     
         packet = header + payload
 
