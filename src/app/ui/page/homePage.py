@@ -72,33 +72,11 @@ class HomePage(ft.Container):
                         ft.Container(expand=True),
                         ft.Column([
                                 ft.IconButton(
-                                    icon=ft.Icons.DOWNLOAD, 
-                                    icon_size=30,
-                                    on_click=self.showDownloadDialog
-                                ),
-                                ft.Text("Download", size=10, weight=ft.FontWeight.BOLD)
-                            ], 
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=0
-                        ),
-                        ft.Column([
-                                ft.IconButton(
                                     icon=ft.Icons.UPLOAD,
                                     icon_size=30,
                                     on_click=self.showUploadDialog
                                 ),
                                 ft.Text("Upload", size=10, weight=ft.FontWeight.BOLD)
-                            ], 
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=0
-                        ),
-                        ft.Column([
-                                ft.IconButton(
-                                    icon=ft.Icons.QR_CODE,
-                                    icon_size=30,
-                                    on_click=self.showQRCODEDialog
-                                ),
-                                ft.Text("QRCode", size=10, weight=ft.FontWeight.BOLD)
                             ], 
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             spacing=0
@@ -148,20 +126,6 @@ class HomePage(ft.Container):
             )
         ])
         self.dialogUpload.open = True
-        self.page.update()
-    
-    def showDownloadDialog(self):
-        self.dialogDownload.content = ft.Column([
-            ft.Text("Em breve!")
-        ])
-        self.dialogDownload.open = True
-        self.page.update()
-
-    def showQRCODEDialog(self):
-        self.dialogQRCODE.content = [
-            ft.Text("Em breve!")
-        ]
-        self.dialogQRCODE.open = True
         self.page.update()
 
     def close_dialog(self, dialog):

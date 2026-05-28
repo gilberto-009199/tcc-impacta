@@ -149,7 +149,7 @@ class Peer:
             # Agora acessamos o frame e o código
             linha = tb.tb_lineno
             arquivo = tb.tb_frame.f_code.co_filename
-            logger.info(f"{self.name}[PEER] [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
+            logger.info(f"{self.name}[PEER] [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}, erro: {e}")
            
             self.disconnect()
 
@@ -230,17 +230,27 @@ class Peer:
             case Msg.MSG_TYPE_PIECE:
                 logger.info(f"{self.name}[PEER] Recebido piece de {self.host}:{self.port}")
                 data = MsgPiece.ofPacket(buffer);
-                logger.info(f"\t + CONTENT : {data}")
+                logger.info(f"\t + CONTENT : {data.__str__()[:128]}")
+
+
+                # send filemanager piece received
+                self.fileManager.recvMsgPiece(
+                    peer=self,
+                    merkle_root=data.identifier_file,
+                    identifier_piece=data.identifier_piece,
+                    identifier_index=data.identifier_index,
+                    buffer=data.buffer
+                )
 
             case Msg.MSG_TYPE_PIECE_REQUEST:
                 logger.info(f"{self.name}[PEER] Recebido piece request de {self.host}:{self.port}")
                 data = MsgPieceRequest.ofPacket(buffer);
-                logger.info(f"\t + CONTENT : {data}")
+                logger.info(f"\t + CONTENT : {data[:90]}")
 
             case _:
                 logger.info(f"{self.name}[PEER] Recebido msg desconhecida de {self.host}:{self.port}")
                 data = Msg.ofPacket(buffer);
-                logger.info(f"\t + CONTENT : {data}")
+                logger.info(f"\t + CONTENT : {data[:90]}")
         
     def keepAlive(self):
         try:
@@ -272,7 +282,7 @@ class Peer:
             # Agora acessamos o frame e o código
             linha = tb.tb_lineno
             arquivo = tb.tb_frame.f_code.co_filename
-            logger.info(f" [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}")
+            logger.info(f" [LOCAL] Erro no arquivo: {arquivo}, linha: {linha}, erro: {e}")
             self.disconnect()
 
     def handShake(self):

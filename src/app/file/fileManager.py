@@ -10,11 +10,12 @@ logger = logging.getLogger(__name__)
 
 from pathlib import Path
 
-from app.util.MerkleyUtil import MerkleUtil
+from app.util.MerkleyUtil import MerkleUtil, BLOCK_SIZE
 from app.util.FileUtil import FileUtil
 from app.file.fileHandle import FileHandle
 from app.file.fileUpload import FileUpload
 from app.file.fileDownload import FileDownload
+
 
 class FileManager():
     def __init__(self, app):
@@ -70,10 +71,10 @@ class FileManager():
         # verify Pieces  and update statics
         while self.running:
             try:
-                
-                time.sleep(0.1) 
-                self.requestPieces()
+
                 self.verifyPieces()
+                time.sleep(0.1)
+                self.requestPieces()
                 time.sleep(0.1)
                 self.sendPieces()
 
@@ -88,7 +89,49 @@ class FileManager():
                 
                 linha = tb.tb_lineno
                 arquivo = tb.tb_frame.f_code.co_filename
-                logger.info(f"86 [FileManager] Erro no arquivo: {arquivo}, linha: {linha}")
+                logger.info(f"[FileManager] Erro no arquivo: {arquivo}, linha: {linha}, erro: {e}")
+
+    def verifyPieces(self):
+        logging.debug(f"{__name__} verifyPieces iniciado!")
+        try:
+
+            for merkle_root in self.downloads:
+                fileDownload = self.downloads[merkle_root]
+                if not fileDownload.download:
+                    continue
+
+                fileInfo = fileDownload.fileInfo
+                block_hashes = fileInfo.get('block_hashes')
+                block_download = fileInfo.get('block_download')
+
+                for index, block in enumerate(block_download):
+                    if block == 0:
+                        continue
+                    
+                    block_size, buffer = fileDownload.pieces_received.get(index, (None, None))
+                    if block_size is None or buffer is None:
+                        logger.warning(f"Bloco {index} não encontrado em pieces_received para {merkle_root}")
+                        continue
+
+                    # @todo verify block hash with block_hashes[index]
+                    # if hash(buffer) == block_hashes[index]:
+                    #     fileDownload.block_download[index] = 1
+                    #     logger.info(f"Bloco {index} verificado com sucesso para {merkle_root}")
+                    # else:
+                    #     logger.warning(f"Falha na verificação do bloco {index} para {merkle_root}, hash não corresponde")
+
+
+        except Exception as e:
+            tb = e.__traceback__
+            
+            while tb.tb_next:
+                tb = tb.tb_next
+            
+            linha = tb.tb_lineno
+            arquivo = tb.tb_frame.f_code.co_filename
+            logger.info(f"[FileManager] Erro no arquivo: {arquivo}, linha: {linha}, erro: {e}")
+
+
 
     def requestPieces(self):
         logging.debug(f"{__name__} requestPieces iniciado!")
@@ -96,6 +139,7 @@ class FileManager():
             fileDownload = self.downloads[merkle_root]
             if not fileDownload.download:
                 continue
+
             fileInfo = fileDownload.fileInfo
             merkle_root = fileInfo.get('merkle_root')
             block_size = fileInfo.get('block_size')
@@ -109,9 +153,6 @@ class FileManager():
                 if block == 0:
                     self.peerManager.requestPieces(merkle_root, index, block_size)
 
-
-    def verifyPieces(self):
-        logging.debug(f"{__name__} verifyPieces iniciado!")
 
 
     def sendPieces(self):
@@ -180,3 +221,9 @@ class FileManager():
             buffer = buffer
         )
         peer.queueSend(msg)
+
+    def recvMsgPiece(self, peer, merkle_root, identifier_piece, identifier_index, buffer):
+        logging.info(f"{__name__} recvMsgPiece iniciado! peer={peer}, merkle_root={merkle_root}, identifier_piece={identifier_piece}, identifier_index={identifier_index}, buffer_length={len(buffer)}")
+
+        download = self.downloads[merkle_root];
+        download.addBlock(block_index=identifier_piece * BLOCK_SIZE, block_size=len(buffer), buffer=buffer)

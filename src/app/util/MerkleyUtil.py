@@ -6,6 +6,7 @@ import hashlib
 import os
 from typing import List, Tuple, Optional
 
+BLOCK_SIZE = 1024 * 1024  # 1 MB
 
 class MerkleUtil:
     """
@@ -23,7 +24,7 @@ class MerkleUtil:
         merkle.verify_block(5, dados_do_bloco, prova)
     """
     
-    BLOCK_SIZE = 1024 * 1024  # 1 MB
+    
     
     def __init__(self, file_path: str = None, block_size: int = BLOCK_SIZE):
         """

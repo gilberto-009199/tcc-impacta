@@ -19,26 +19,29 @@ class FileHandle:
     
     def _open(self):
         """Abre o arquivo e cria mapeamento de memória"""
-        self.file = open(self.path, 'rb')
+        self.file = open(self.path, 'r+b')
         
-        # Obtém o tamanho real do arquivo
+        
         try:
-            real_size = os.path.getsize(self.path)
-            self.size = real_size
+            logger.info(f"Preenchendo arquivo novo/vazio {self.path} com {self.size} bytes de zeros.")
+            # Aloca o tamanho desejado. O SO preenche com zeros automaticamente.
+            self.file.truncate(self.size)
+            self.file.flush()
+
+            self.size = self.size
+            logger.info(f"Arquivo {self.path} preenchido com {self.size} bytes de zeros.")
         except OSError as e:
-            logger.error(f"Erro ao obter tamanho do arquivo {self.path}: {e}")
+            logger.error(f"Erro ao alocar espaço inicial para o arquivo: {e}")
             self.size = 0
         
         # Verifica se o arquivo tem 0 bytes
         if self.size == 0:
             logger.info(f"Arquivo {self.path} tem 0 bytes (arquivo vazio/criado recentemente)")
-            # Não tenta criar mmap para arquivo vazio
             self.mmap = None
             return
         
         try:
-            # Tenta usar mmap para acesso eficiente (apenas para arquivos > 0 bytes)
-            self.mmap = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
+            self.mmap = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_WRITE)
         except Exception as e:
             logger.warning(f"Falha ao criar mmap para {self.path}: {e}")
             self.mmap = None
@@ -74,7 +77,35 @@ class FileHandle:
             # Fallback para leitura tradicional
             self.file.seek(offset)
             return self.file.read(actual_size)
-    
+
+
+    def write_block(self, block_index: int, block_size: int, buffer: bytes):
+        """
+        Escreve um bloco arbitrário no arquivo
+        
+        Args:
+            block_index: Índice do bloco (0-based)
+            block_size: Tamanho do bloco em bytes
+            buffer: Dados a serem escritos
+        """
+        offset = block_index * block_size
+
+        if offset > self.size:
+            logger.error(f"Offset {offset} é maior que o tamanho do arquivo {self.size}, não é possível escrever")
+            return
+
+        try:
+            
+            self.mmap.seek(offset)
+            self.mmap.write(buffer)
+            self.mmap.flush()
+
+        except Exception as e:
+            logger.error(f"Erro ao escrever bloco {block_index}: {e}")
+            self.file.seek(offset)
+            self.file.write(buffer)
+            self.file.flush()
+
     def get_block_count(self, block_size: int = 1024 * 1024) -> int:
         """Retorna o número total de blocos de 1MB no arquivo"""
         if self.size == 0:
