@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class UPNPService:
     
-    def __init__(self, app, feedback):
+    def __init__(self, app):
         """
         Inicializa o serviço UPnP com uma instância de Network
         
@@ -23,8 +23,7 @@ class UPNPService:
         self.upnp = None
         self.router = None
         self.dispositivo_conectado = False
-        self.feedback = feedback
-        logger.info("🔌 UPNPService initialized")
+        logger.info("UPNPService initialized")
     
     def config(self):
         """Configura e descobre dispositivos UPnP na rede"""
@@ -85,7 +84,7 @@ class UPNPService:
         
     def openPort(self, port=9292, protocolo='TCP', descricao="Porta aberta via Python"):
         """Abre uma porta no roteador via UPnP"""
-        
+        logger.info(f"openPort ")
         if not self.dispositivo_conectado:
             logger.warning("⚠️  UPnP não configurado. Executando config()...")
             if not self.config():
@@ -94,6 +93,8 @@ class UPNPService:
         self.closePort(port, protocolo)
      
         service = self.getServicesRouter()
+        
+        logger.info(f"openPort {service}")
 
         service.AddPortMapping(
             NewRemoteHost='',
@@ -108,11 +109,6 @@ class UPNPService:
         
         logger.info("Mapeamento novo com sucesso.")
         
-        self.feedback.controls.append(
-            ft.Text(f"""
-                Mapeamento novo com sucesso.
-            """,
-            color=ft.Colors.BLACK))
         
         return True
 
@@ -121,7 +117,7 @@ class UPNPService:
         """Fecha uma porta no roteador"""
         
         if not self.dispositivo_conectado:
-            logger.warning("⚠️  UPnP não configurado. Executando config()...")
+            logger.warning(" UPnP não configurado. Executando config()...")
             if not self.config():
                 return False
         
@@ -136,11 +132,6 @@ class UPNPService:
             )
 
             print("Mapeamento antigo removido com sucesso.")
-            self.feedback.controls.append(
-                ft.Text(f"""
-                    Mapeamento antigo removido com sucesso.
-                """,
-                color=ft.Colors.BLACK))
         
             return True
             

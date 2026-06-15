@@ -11,14 +11,14 @@ from app.ssdp.multicast.network import Network
 
 wait_time_default = 5 # 5s
 headers_default = {
-    "Type": "Acme:TestDevice",
-    "Primary-Proxy": "test-device",
-    "Proxies": "test-device",
+    "Type": "impacta:mensageiro",
+    "Primary-Proxy": "impacta_mensageiro",
+    "Proxies": "impacta_mensageiro",
     "Manufacturer": "Acme",
-    "Model": "TestDevPlus",
+    "Model": "impacta_mensageiro_v1",
     "Port": 97777,
     "Identifier": "==9hu43r39h4r93h4534h5oiuh",
-    "Driver": "test-device_Acme_TestDevPlus.c4i",
+    "Driver": "impacta_mensageiro.c4i",
 };
 
 class SSDPManager():    
